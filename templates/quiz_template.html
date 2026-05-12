@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>词语闯关</title>
+<style>
+:root {
+  --sky: #6db8e8; --sky-soft: #d6ecf7; --sky-deep: #4a9bd1;
+  --mint: #7dceb4; --mint-soft: #e0f5ee; --mint-deep: #56b094;
+  --orange: #f5a85c; --orange-soft: #fde4ce; --orange-deep: #e88e3a;
+  --coral: #f08080; --coral-soft: #fce0e0;
+  --bg: #fafbf6; --ink: #34495e; --ink-soft: #7a8b9c;
+  --line: #e8ecef; --gold: #ffc857;
+  --shadow: rgba(74, 155, 209, 0.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(109, 184, 232, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(125, 206, 180, 0.06) 0%, transparent 40%);
+  color: var(--ink);
+  min-height: 100vh;
+  padding: 16px 12px;
+  line-height: 1.6;
+}
+.container { max-width: 720px; margin: 0 auto; }
+
+.header { text-align: center; padding: 16px 12px 20px; }
+.title-row { display: inline-flex; align-items: center; gap: 12px; background: #fff; padding: 10px 24px; border-radius: 100px; box-shadow: 0 4px 16px var(--shadow); }
+.title-emoji { font-size: 24px; }
+.title-text { font-size: 18px; font-weight: 700; color: var(--sky-deep); letter-spacing: 2px; }
+.subtitle { font-size: 12px; color: var(--ink-soft); margin-top: 10px; letter-spacing: 1px; }
+.subtitle strong { color: var(--orange-deep); }
+
+.stats-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+.stat-card { flex: 1; background: #fff; border-radius: 12px; padding: 10px 12px; text-align: center; box-shadow: 0 2px 8px var(--shadow); transition: transform 0.2s; }
+.stat-card:hover { transform: translateY(-2px); }
+.stat-emoji { font-size: 18px; margin-bottom: 2px; }
+.stat-num { font-size: 20px; font-weight: 700; color: var(--sky-deep); }
+.stat-label { font-size: 10px; color: var(--ink-soft); letter-spacing: 1px; }
+.stat-card.stars .stat-num { color: var(--orange-deep); }
+.stat-card.words .stat-num { color: var(--mint-deep); }
+
+.progress-wrap { background: #fff; border-radius: 100px; height: 10px; margin-bottom: 4px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.04); border: 1px solid var(--line); }
+.progress-bar { height: 100%; background: linear-gradient(90deg, var(--sky), var(--mint) 50%, var(--orange)); width: 0%; transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 100px; }
+.progress-text { font-size: 11px; color: var(--ink-soft); text-align: right; margin-bottom: 14px; letter-spacing: 1px; }
+
+.step-indicator { display: flex; justify-content: center; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.step-dot { display: flex; align-items: center; gap: 4px; background: #fff; padding: 5px 10px; border-radius: 100px; font-size: 11px; color: var(--ink-soft); border: 2px solid var(--line); transition: all 0.3s; }
+.step-dot .step-circle { width: 18px; height: 18px; border-radius: 50%; background: var(--line); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 700; }
+.step-dot.active { border-color: var(--sky); color: var(--sky-deep); background: var(--sky-soft); }
+.step-dot.active .step-circle { background: var(--sky); }
+.step-dot.done { border-color: var(--mint); color: var(--mint-deep); background: var(--mint-soft); }
+.step-dot.done .step-circle { background: var(--mint); }
+.step-dot.done .step-circle::before { content: "✓"; }
+.step-dot.done .step-circle .step-num { display: none; }
+
+.card { background: #fff; border-radius: 18px; padding: 20px 18px; box-shadow: 0 4px 20px var(--shadow); margin-bottom: 14px; animation: cardIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes cardIn { from { opacity: 0; transform: translateY(20px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.word-header { text-align: center; margin-bottom: 16px; }
+.word-display { display: inline-block; font-size: 30px; font-weight: 700; color: var(--ink); background: linear-gradient(135deg, var(--sky-soft), var(--mint-soft)); padding: 12px 28px; border-radius: 14px; letter-spacing: 3px; margin-bottom: 8px; position: relative; cursor: pointer; transition: all 0.2s; }
+.word-display:hover { transform: scale(1.03); box-shadow: 0 4px 16px var(--shadow); }
+.word-display:active { transform: scale(0.98); }
+.word-display::after { content: "🔊"; position: absolute; right: -6px; bottom: -6px; background: var(--orange); color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 8px rgba(245, 168, 92, 0.4); }
+.word-display .pinyin { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 400; color: var(--sky-deep); background: #fff; padding: 2px 10px; border-radius: 100px; letter-spacing: 2px; white-space: nowrap; }
+
+.step-label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--sky-deep); background: var(--sky-soft); padding: 4px 10px; border-radius: 100px; letter-spacing: 1px; }
+
+.scene-box { background: linear-gradient(135deg, #fffbf2, #f2f9ff); border-radius: 14px; padding: 20px 16px; margin: 14px 0; text-align: center; border: 2px dashed var(--orange-soft); }
+.scene-emojis { font-size: 48px; line-height: 1.2; margin-bottom: 8px; letter-spacing: 4px; }
+.scene-caption { font-size: 14px; color: var(--ink); font-weight: 500; letter-spacing: 1px; margin-top: 6px; }
+.scene-caption .speech { display: inline-block; background: #fff; padding: 3px 10px; border-radius: 10px; margin: 0 4px; font-size: 13px; color: var(--coral); box-shadow: 0 2px 6px rgba(240, 128, 128, 0.15); }
+
+.q-prompt-wrap { display: flex; align-items: center; gap: 8px; margin: 14px 0 12px; justify-content: center; }
+.q-prompt { font-size: 15px; color: var(--ink); font-weight: 600; letter-spacing: 1px; text-align: center; }
+
+.speak-btn { background: var(--sky-soft); border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.2s; color: var(--sky-deep); flex-shrink: 0; }
+.speak-btn:hover { background: var(--sky); color: #fff; transform: scale(1.1); }
+.speak-btn:active { transform: scale(0.95); }
+.speak-btn.speaking { background: var(--orange); color: #fff; animation: pulse 1s ease infinite; }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+.options { display: flex; flex-direction: column; gap: 8px; }
+.option { display: flex; align-items: flex-start; gap: 8px; padding: 12px 12px; background: #fff; border: 2px solid var(--line); border-radius: 12px; cursor: pointer; transition: all 0.2s; font-size: 14px; line-height: 1.6; font-family: inherit; text-align: left; width: 100%; color: var(--ink); }
+.option:hover:not(.disabled) { background: var(--sky-soft); border-color: var(--sky); transform: translateX(4px); }
+.option:active:not(.disabled) { transform: scale(0.98); }
+.option-label { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sky-soft); color: var(--sky-deep); font-weight: 700; flex-shrink: 0; font-size: 12px; }
+.option-text { flex: 1; padding-top: 3px; }
+.option-text u { color: var(--orange-deep); text-decoration-color: var(--orange); text-decoration-thickness: 2px; text-underline-offset: 3px; font-weight: 600; }
+.option-speak { background: transparent; border: none; cursor: pointer; font-size: 13px; padding: 3px 5px; border-radius: 8px; color: var(--ink-soft); flex-shrink: 0; transition: all 0.2s; margin-top: 2px; }
+.option-speak:hover { background: var(--sky-soft); color: var(--sky-deep); }
+.option-speak.speaking { color: var(--orange-deep); animation: pulse 1s ease infinite; }
+
+.option.disabled { cursor: default; }
+.option.disabled:hover { transform: none; }
+.option.correct { background: var(--mint-soft); border-color: var(--mint); animation: correctPulse 0.5s ease; }
+.option.correct .option-label { background: var(--mint); color: #fff; }
+@keyframes correctPulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+.option.wrong { background: var(--coral-soft); border-color: var(--coral); animation: shake 0.4s ease; }
+.option.wrong .option-label { background: var(--coral); color: #fff; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+
+.feedback { margin-top: 14px; padding: 14px 16px; border-radius: 12px; font-size: 13px; line-height: 1.7; display: none; animation: fbIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; }
+@keyframes fbIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+.feedback.show { display: block; }
+.feedback.correct-fb { background: var(--mint-soft); border-left: 4px solid var(--mint); }
+.feedback.wrong-fb { background: var(--coral-soft); border-left: 4px solid var(--coral); }
+.fb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+.fb-title { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.correct-fb .fb-title { color: var(--mint-deep); }
+.wrong-fb .fb-title { color: var(--coral); }
+.fb-speak { background: #fff; border: 1.5px solid var(--orange); color: var(--orange-deep); padding: 5px 10px; border-radius: 100px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s; font-family: inherit; font-weight: 600; flex-shrink: 0; }
+.fb-speak:hover { background: var(--orange); color: #fff; }
+.fb-speak.speaking { background: var(--orange); color: #fff; animation: pulse 1s ease infinite; }
+.fb-row { margin-top: 6px; font-size: 13px; }
+.fb-row strong { color: var(--orange-deep); }
+.fb-remember { margin-top: 8px; padding: 10px 12px; background: rgba(255,255,255,0.7); border-radius: 10px; font-size: 12px; color: var(--ink); border: 1px dashed var(--orange); }
+.fb-remember strong { color: var(--orange-deep); }
+
+.btn-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.btn { padding: 10px 22px; font-size: 13px; font-family: inherit; border: none; border-radius: 10px; cursor: pointer; letter-spacing: 2px; transition: all 0.2s; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: linear-gradient(135deg, var(--sky), var(--sky-deep)); color: #fff; box-shadow: 0 4px 12px rgba(74, 155, 209, 0.3); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(74, 155, 209, 0.4); }
+.btn-success { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); color: #fff; box-shadow: 0 4px 12px rgba(86, 176, 148, 0.3); }
+.btn-success:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(86, 176, 148, 0.4); }
+
+.star-burst { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 70px; pointer-events: none; z-index: 1000; animation: starBurst 1.5s ease-out forwards; }
+@keyframes starBurst { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0); } 30% { opacity: 1; transform: translate(-50%, -50%) scale(1.4) rotate(20deg); } 70% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-10deg); } 100% { opacity: 0; transform: translate(-50%, -150%) scale(0.8) rotate(0); } }
+
+.confetti-piece { position: fixed; width: 10px; height: 10px; top: -20px; pointer-events: none; z-index: 999; animation: confettiFall 2.5s ease-out forwards; }
+@keyframes confettiFall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(100vh) rotate(720deg); } }
+
+.word-complete { background: linear-gradient(135deg, var(--orange-soft), #fff8e7); border-radius: 18px; padding: 26px 22px; text-align: center; border: 3px solid var(--orange); animation: cardIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.word-complete-emoji { font-size: 50px; margin-bottom: 10px; animation: bounce 1s ease infinite; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.word-complete-title { font-size: 22px; font-weight: 700; color: var(--orange-deep); margin-bottom: 6px; }
+.word-complete-word { font-size: 24px; color: var(--ink); font-weight: 700; margin: 8px 0; letter-spacing: 3px; }
+.word-complete-stars { font-size: 28px; margin: 8px 0; letter-spacing: 6px; }
+.word-complete-msg { font-size: 13px; color: var(--ink-soft); margin: 10px 0 18px; }
+
+.gallery { display: none; }
+.gallery.show { display: block; }
+.gallery-header { text-align: center; padding: 26px 14px; background: linear-gradient(135deg, var(--sky-soft), var(--mint-soft) 50%, var(--orange-soft)); border-radius: 20px; margin-bottom: 20px; }
+.gallery-emoji { font-size: 48px; margin-bottom: 6px; }
+.gallery-title { font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: 3px; margin-bottom: 4px; }
+.gallery-stats { font-size: 13px; color: var(--ink-soft); letter-spacing: 1px; margin-top: 6px; }
+.gallery-stats strong { color: var(--orange-deep); font-size: 16px; margin: 0 4px; }
+.gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
+.gallery-item { background: #fff; border-radius: 12px; padding: 12px; box-shadow: 0 3px 10px var(--shadow); border: 2px solid transparent; transition: all 0.2s; }
+.gallery-item:hover { transform: translateY(-3px); border-color: var(--sky); }
+.gallery-item.perfect { border-color: var(--gold); background: linear-gradient(135deg, #fff, #fffbf0); }
+.gallery-word { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 4px; letter-spacing: 1px; }
+.gallery-stars { font-size: 13px; margin-bottom: 4px; letter-spacing: 2px; }
+.gallery-tip { font-size: 11px; color: var(--ink-soft); line-height: 1.5; }
+.gallery-final-msg { background: #fff; padding: 18px; border-radius: 12px; text-align: center; font-size: 14px; line-height: 1.8; color: var(--ink); box-shadow: 0 3px 10px var(--shadow); margin-bottom: 14px; }
+
+.voice-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(52, 73, 94, 0.92); color: #fff; padding: 10px 18px; border-radius: 100px; font-size: 12px; z-index: 2000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.voice-toast.show { opacity: 1; }
+
+.upload-status { position: fixed; top: 16px; right: 16px; background: rgba(86, 176, 148, 0.9); color: #fff; padding: 6px 12px; border-radius: 100px; font-size: 11px; z-index: 1500; opacity: 0; transition: opacity 0.3s; }
+.upload-status.show { opacity: 1; }
+.upload-status.error { background: rgba(240, 128, 128, 0.9); }
+
+@media (max-width: 480px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+  .word-display { font-size: 24px; padding: 10px 20px; letter-spacing: 2px; }
+  .scene-emojis { font-size: 40px; }
+  .title-text { font-size: 16px; }
+  .step-dot { font-size: 10px; padding: 4px 8px; }
+  .option { font-size: 13px; padding: 10px 10px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header class="header">
+    <div class="title-row">
+      <span class="title-emoji">📖</span>
+      <span class="title-text">词语闯关</span>
+      <span class="title-emoji">✨</span>
+    </div>
+    <div class="subtitle" id="lesson-info"></div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-card words">
+      <div class="stat-emoji">📚</div>
+      <div class="stat-num" id="words-done">0</div>
+      <div class="stat-label">已学词语</div>
+    </div>
+    <div class="stat-card stars">
+      <div class="stat-emoji">⭐</div>
+      <div class="stat-num" id="stars-earned">0</div>
+      <div class="stat-label">收集星星</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-emoji">🎯</div>
+      <div class="stat-num" id="accuracy">--</div>
+      <div class="stat-label">正确率%</div>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+  <div class="progress-text" id="progress-text">第 1 题</div>
+
+  <div id="game-area"></div>
+  <div class="gallery" id="gallery"></div>
+</div>
+
+<div class="voice-toast" id="voice-toast"></div>
+<div class="upload-status" id="upload-status"></div>
+
+<script>
+// ===== 数据注入点（由 Streamlit 替换）=====
+const QUIZ_CONTEXT = __QUIZ_CONTEXT__;
+const wordsData = __WORDS_DATA__;
+// ===========================================
+
+// 设置课文信息显示
+document.getElementById('lesson-info').innerHTML =
+  QUIZ_CONTEXT.lesson_label +
+  '<br>同学：<strong>' + QUIZ_CONTEXT.student_name + '</strong>（' + QUIZ_CONTEXT.class_name + '）';
+
+// =============================================================
+// Web Speech API
+// =============================================================
+let speechSynth = window.speechSynthesis;
+let preferredVoice = null;
+let currentSpeakingBtn = null;
+
+function loadVoices() {
+  if (!speechSynth) return;
+  const voices = speechSynth.getVoices();
+  const isFemale = v => /female|woman|girl|tingting|ting-ting|huihui|yaoyao|xiaoxiao|xiaoyi|kangkang|hanhan|mei-jia|sin-ji|li-mu/i.test(v.name);
+  const zhCN = voices.filter(v => v.lang === 'zh-CN' || v.lang === 'zh_CN' || v.lang.toLowerCase().startsWith('zh-cn'));
+  const zhTW = voices.filter(v => v.lang === 'zh-TW' || v.lang === 'zh_TW' || v.lang.toLowerCase().startsWith('zh-tw'));
+  const zhAny = voices.filter(v => v.lang.toLowerCase().startsWith('zh'));
+  preferredVoice = zhCN.find(isFemale) || zhCN[0] || zhTW.find(isFemale) || zhTW[0] || zhAny.find(isFemale) || zhAny[0] || null;
+}
+if (speechSynth) {
+  loadVoices();
+  speechSynth.onvoiceschanged = loadVoices;
+}
+
+function stripHtml(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || div.innerText || '';
+}
+
+function showVoiceToast(msg) {
+  const toast = document.getElementById('voice-toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function speak(text, btn) {
+  if (!speechSynth) { showVoiceToast('您的浏览器不支持语音功能'); return; }
+  if (speechSynth.speaking) {
+    speechSynth.cancel();
+    if (currentSpeakingBtn) currentSpeakingBtn.classList.remove('speaking');
+    if (currentSpeakingBtn === btn) { currentSpeakingBtn = null; return; }
+  }
+  const cleanText = stripHtml(text);
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  utterance.lang = 'zh-CN';
+  utterance.rate = 0.9;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+  if (preferredVoice) utterance.voice = preferredVoice;
+  if (btn) { btn.classList.add('speaking'); currentSpeakingBtn = btn; }
+  utterance.onend = () => { if (btn) btn.classList.remove('speaking'); currentSpeakingBtn = null; };
+  utterance.onerror = () => { if (btn) btn.classList.remove('speaking'); currentSpeakingBtn = null; };
+  speechSynth.speak(utterance);
+}
+
+window.speakWord = function(wordIdx, btn) { speak(wordsData[wordIdx].word, btn); };
+window.speakText = function(text, btn) { speak(text, btn); };
+window.speakFeedback = function(btn) {
+  const fb = document.getElementById('feedback');
+  if (!fb) return;
+  const parts = [];
+  fb.querySelectorAll('.fb-title').forEach(el => parts.push(el.textContent.replace(/[🎉🤔✅💭]/g, '').trim()));
+  fb.querySelectorAll('.fb-row').forEach(el => parts.push(el.textContent.trim()));
+  fb.querySelectorAll('.fb-remember').forEach(el => parts.push(el.textContent.replace(/💡/g, '').trim()));
+  speak(parts.join('。'), btn);
+};
+
+// =============================================================
+// 答题数据上传（通过 fetch 到 Streamlit 后端）
+// =============================================================
+function showUploadStatus(msg, isError) {
+  const el = document.getElementById('upload-status');
+  el.textContent = msg;
+  el.classList.toggle('error', !!isError);
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+// 缓存答题数据 - 在 sessionStorage 中持久化
+const ATTEMPTS_KEY = 'cilang_attempts_' + QUIZ_CONTEXT.session_token;
+function loadAttempts() {
+  try { return JSON.parse(sessionStorage.getItem(ATTEMPTS_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+function saveAttempts(arr) {
+  try { sessionStorage.setItem(ATTEMPTS_KEY, JSON.stringify(arr)); } catch(e) {}
+}
+
+function recordAttempt(word, stepType, isCorrect, chosenIdx, correctIdx) {
+  const attempts = loadAttempts();
+  attempts.push({
+    word, step_type: stepType, is_correct: isCorrect,
+    chosen_idx: chosenIdx, correct_idx: correctIdx,
+    answered_at: new Date().toISOString()
+  });
+  saveAttempts(attempts);
+}
+
+// 当会话结束时，把所有数据通过 query param 提交回 Streamlit
+function submitFinalData(totalSteps, correctSteps, starsEarned) {
+  const attempts = loadAttempts();
+  const payload = {
+    session_token: QUIZ_CONTEXT.session_token,
+    class_name: QUIZ_CONTEXT.class_name,
+    student_id: QUIZ_CONTEXT.student_id,
+    student_name: QUIZ_CONTEXT.student_name,
+    lesson_id: QUIZ_CONTEXT.lesson_id,
+    teacher_id: QUIZ_CONTEXT.teacher_id,
+    total_steps: totalSteps,
+    correct_steps: correctSteps,
+    stars_earned: starsEarned,
+    attempts: attempts
+  };
+  // 通过 postMessage 传给父窗口（Streamlit）
+  try {
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'quiz_complete', payload: payload }, '*');
+    }
+  } catch(e) { console.warn('postMessage failed', e); }
+
+  // 同时存在 localStorage 让父页面读取
+  try {
+    localStorage.setItem('cilang_last_result_' + QUIZ_CONTEXT.session_token, JSON.stringify(payload));
+  } catch(e) {}
+}
+
+// =============================================================
+// State
+// =============================================================
+function calcTotalSteps() {
+  let total = 0;
+  wordsData.forEach(w => total += (w.difficulty === 'hard') ? 3 : 1);
+  return total;
+}
+const TOTAL_STEPS = calcTotalSteps();
+
+let currentWordIdx = 0;
+let currentStep = 0;
+let stepIdx = 0;
+let starsEarned = 0;
+let totalAnswered = 0;
+let totalCorrect = 0;
+let answered = false;
+let wordResults = [];
+let wordStarsTracker = 0;
+
+const gameArea = document.getElementById('game-area');
+const gallery = document.getElementById('gallery');
+
+function getCurrentStepData(wordIdx, step) {
+  const w = wordsData[wordIdx];
+  if (w.difficulty === 'easy') return { type: 'trap', data: w.trap };
+  if (step === 0) return { type: 'meaning', data: w.meaning };
+  if (step === 1) return { type: 'usage', data: w.usage };
+  return { type: 'trap', data: w.trap };
+}
+
+function getStepLabel(type) {
+  if (type === 'meaning') return { emoji: '🔍', label: '第 1 关 · 认识词义' };
+  if (type === 'usage') return { emoji: '🎯', label: '第 2 关 · 学会用法' };
+  return { emoji: '⚡', label: '挑战关 · 火眼金睛' };
+}
+
+function getStepCountForWord(wordIdx) {
+  return wordsData[wordIdx].difficulty === 'hard' ? 3 : 1;
+}
+
+function updateStats() {
+  document.getElementById('words-done').textContent = wordResults.length;
+  document.getElementById('stars-earned').textContent = starsEarned;
+  const acc = totalAnswered === 0 ? '--' : Math.round((totalCorrect / totalAnswered) * 100);
+  document.getElementById('accuracy').textContent = acc;
+  document.getElementById('progress-bar').style.width = ((stepIdx / TOTAL_STEPS) * 100) + '%';
+  document.getElementById('progress-text').textContent = `第 ${Math.min(stepIdx + 1, TOTAL_STEPS)} 关 / 共 ${TOTAL_STEPS} 关`;
+}
+
+function renderStepIndicator(wordIdx, currentStep) {
+  const w = wordsData[wordIdx];
+  if (w.difficulty === 'easy') return '';
+  const steps = [{ label: '词义', num: 1 }, { label: '用法', num: 2 }, { label: '挑战', num: 3 }];
+  return `<div class="step-indicator">${steps.map((s, i) => {
+    let cls = ''; if (i < currentStep) cls = 'done'; else if (i === currentStep) cls = 'active';
+    return `<div class="step-dot ${cls}"><span class="step-circle"><span class="step-num">${s.num}</span></span><span>${s.label}</span></div>`;
+  }).join('')}</div>`;
+}
+
+function escapeJs(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"'); }
+
+function render() {
+  if (speechSynth && speechSynth.speaking) {
+    speechSynth.cancel();
+    if (currentSpeakingBtn) currentSpeakingBtn.classList.remove('speaking');
+    currentSpeakingBtn = null;
+  }
+  if (currentWordIdx >= wordsData.length) { showGallery(); return; }
+
+  const w = wordsData[currentWordIdx];
+  const stepInfo = getCurrentStepData(currentWordIdx, currentStep);
+  const stepLabel = getStepLabel(stepInfo.type);
+  const data = stepInfo.data;
+  answered = false;
+  const showScene = stepInfo.type === 'meaning' && data.scene;
+
+  // Pinyin 可能没有
+  const pinyinHtml = w.pinyin ? `<span class="pinyin">${w.pinyin}</span>` : '';
+
+  gameArea.innerHTML = `
+    ${renderStepIndicator(currentWordIdx, currentStep)}
+    <div class="card">
+      <div class="word-header">
+        <div class="word-display" onclick="speakWord(${currentWordIdx}, this)" title="点击听发音">
+          ${pinyinHtml}
+          ${w.word}
+        </div>
+        <br>
+        <span class="step-label">${stepLabel.emoji} ${stepLabel.label}</span>
+      </div>
+      ${showScene ? `
+        <div class="scene-box">
+          <div class="scene-emojis">${data.scene}</div>
+          <div class="scene-caption">${data.caption && data.caption.includes('「') ? data.caption.replace(/「([^」]+)」/g, '<span class="speech">$1</span>') : (data.caption || '')}</div>
+        </div>` : ''}
+      <div class="q-prompt-wrap">
+        <div class="q-prompt">${data.prompt}</div>
+        <button class="speak-btn" onclick="speakText('${escapeJs(data.prompt)}', this)" title="听题目">🔊</button>
+      </div>
+      <div class="options" id="options">
+        ${data.options.map((opt, i) => `
+          <div class="option" data-idx="${i}">
+            <span class="option-label">${String.fromCharCode(65 + i)}</span>
+            <span class="option-text" onclick="selectAnswer(${i})">${opt}</span>
+            <button class="option-speak" onclick="speakText('${escapeJs(stripHtml(opt))}', this); event.stopPropagation();" title="听选项">🔊</button>
+          </div>
+        `).join('')}
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <div class="btn-row" id="btn-row" style="display:none;">
+        <button class="btn btn-primary" onclick="nextStep()">继续 →</button>
+      </div>
+    </div>
+  `;
+  updateStats();
+}
+
+window.selectAnswer = function(chosenIdx) {
+  if (answered) return;
+  answered = true;
+  const stepInfo = getCurrentStepData(currentWordIdx, currentStep);
+  const data = stepInfo.data;
+  const isCorrect = chosenIdx === data.correct;
+  totalAnswered++;
+  if (isCorrect) { totalCorrect++; starsEarned++; wordStarsTracker++; showStarBurst(); }
+
+  // 记录答题
+  recordAttempt(wordsData[currentWordIdx].word, stepInfo.type, isCorrect, chosenIdx, data.correct);
+
+  document.querySelectorAll('.option').forEach((el, i) => {
+    el.classList.add('disabled');
+    const txt = el.querySelector('.option-text');
+    if (txt) txt.style.pointerEvents = 'none';
+    if (i === data.correct) el.classList.add('correct');
+    else if (i === chosenIdx) el.classList.add('wrong');
+  });
+  const fb = document.getElementById('feedback');
+  fb.className = `feedback show ${isCorrect ? 'correct-fb' : 'wrong-fb'}`;
+  if (stepInfo.type === 'trap') {
+    fb.innerHTML = `
+      <div class="fb-header">
+        <div class="fb-title">${isCorrect ? '🎉 答对了，真厉害！' : '🤔 再想想看~'}</div>
+        <button class="fb-speak" onclick="speakFeedback(this)" title="听解释">🔊 听讲解</button>
+      </div>
+      <div class="fb-row"><strong>正确答案：</strong>${String.fromCharCode(65 + data.correct)}</div>
+      <div class="fb-row"><strong>为什么对：</strong>${data.whyCorrect || ''}</div>
+      <div class="fb-row"><strong>错在哪里：</strong>${data.whyWrong || ''}</div>
+      <div class="fb-remember">💡 <strong>一句话记住：</strong>${data.remember || ''}</div>
+    `;
+  } else {
+    fb.innerHTML = `
+      <div class="fb-header">
+        <div class="fb-title">${isCorrect ? '✅ 正确！' : '💭 没关系，看看正确答案~'}</div>
+        <button class="fb-speak" onclick="speakFeedback(this)" title="听解释">🔊 听讲解</button>
+      </div>
+      <div class="fb-row"><strong>正确答案：</strong>${String.fromCharCode(65 + data.correct)} · ${data.options[data.correct]}</div>
+      <div class="fb-remember">💡 ${data.tip || ''}</div>
+    `;
+  }
+  document.getElementById('btn-row').style.display = 'flex';
+  updateStats();
+};
+
+window.nextStep = function() {
+  const totalStepsForWord = getStepCountForWord(currentWordIdx);
+  stepIdx++;
+  if (currentStep + 1 < totalStepsForWord) { currentStep++; render(); }
+  else { finishWord(); }
+};
+
+function finishWord() {
+  const w = wordsData[currentWordIdx];
+  const totalStepsForWord = getStepCountForWord(currentWordIdx);
+  const wordStars = wordStarsTracker;
+  wordResults.push({
+    word: w.word, stars: wordStars, maxStars: totalStepsForWord,
+    remember: (w.trap && w.trap.remember) || (w.meaning && w.meaning.tip) || ''
+  });
+  wordStarsTracker = 0;
+  showWordComplete(w, wordStars, totalStepsForWord);
+}
+
+function showWordComplete(w, stars, maxStars) {
+  const starsHtml = '⭐'.repeat(stars) + '☆'.repeat(maxStars - stars);
+  let msg = '';
+  if (stars === maxStars) { msg = '太厉害了！完美通关，进入下一个词语~'; fireConfetti(); }
+  else if (stars >= maxStars / 2) msg = '不错哦！继续努力，下一个词语你一定可以拿满星！';
+  else msg = '没关系，慢慢来，记住「一句话口诀」最重要~';
+  gameArea.innerHTML = `
+    <div class="word-complete">
+      <div class="word-complete-emoji">🎊</div>
+      <div class="word-complete-title">词语通关！</div>
+      <div class="word-complete-word">${w.word}</div>
+      <div class="word-complete-stars">${starsHtml}</div>
+      <div class="word-complete-msg">${msg}</div>
+      <button class="btn btn-success" onclick="goToNextWord()">
+        ${currentWordIdx + 1 >= wordsData.length ? '查看词语图鉴 →' : '下一个词语 →'}
+      </button>
+    </div>
+  `;
+}
+
+window.goToNextWord = function() {
+  currentWordIdx++;
+  currentStep = 0;
+  if (currentWordIdx >= wordsData.length) showGallery();
+  else render();
+};
+
+function showStarBurst() {
+  const burst = document.createElement('div');
+  burst.className = 'star-burst';
+  burst.textContent = '⭐';
+  document.body.appendChild(burst);
+  setTimeout(() => burst.remove(), 1500);
+}
+
+function fireConfetti() {
+  const colors = ['#6db8e8', '#7dceb4', '#f5a85c', '#f08080', '#ffc857', '#4a9bd1'];
+  for (let i = 0; i < 50; i++) {
+    setTimeout(() => {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      piece.style.animationDelay = (Math.random() * 0.3) + 's';
+      piece.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+      document.body.appendChild(piece);
+      setTimeout(() => piece.remove(), 3500);
+    }, i * 30);
+  }
+}
+
+function showGallery() {
+  gameArea.style.display = 'none';
+  document.querySelector('.step-indicator')?.remove();
+  const totalMaxStars = wordsData.reduce((sum, w) => sum + (w.difficulty === 'hard' ? 3 : 1), 0);
+  const acc = totalAnswered === 0 ? 0 : Math.round((totalCorrect / totalAnswered) * 100);
+
+  // 提交数据
+  submitFinalData(TOTAL_STEPS, totalCorrect, starsEarned);
+
+  let comment = '';
+  if (acc >= 90) comment = '🏆 词语功夫炉火纯青！连最细微的搭配差异都难不倒你。';
+  else if (acc >= 75) comment = '👍 你已经掌握了大部分词语！偶尔出错的地方，看看「一句话记住」就好。';
+  else if (acc >= 60) comment = '📚 基本功不错，但有些词「意思懂、用法不熟」。可以重新挑战错的词语~';
+  else comment = '💪 词语学习需要慢慢积累。不要灰心，把图鉴里的「口诀」抄下来，下次再来！';
+
+  gallery.innerHTML = `
+    <div class="gallery-header">
+      <div class="gallery-emoji">📖</div>
+      <div class="gallery-title">词语图鉴</div>
+      <div class="gallery-stats">
+        共收集 <strong>${starsEarned}</strong> / <strong>${totalMaxStars}</strong> 颗星 · 正确率 <strong>${acc}</strong>%
+      </div>
+    </div>
+    <div class="gallery-final-msg">${comment}</div>
+    <div style="text-align:center; margin: 10px 0 20px; padding: 12px; background: var(--mint-soft); border-radius: 10px; font-size: 13px; color: var(--mint-deep);">
+      ✅ 你的成绩已经上传给老师啦！记得回到 Streamlit 页面点「我已完成，提交成绩」按钮哦。
+    </div>
+    <div class="gallery-grid">
+      ${wordResults.map(r => {
+        const isPerfect = r.stars === r.maxStars;
+        const stars = '⭐'.repeat(r.stars) + '☆'.repeat(r.maxStars - r.stars);
+        return `<div class="gallery-item ${isPerfect ? 'perfect' : ''}">
+          <div class="gallery-word">${r.word}</div>
+          <div class="gallery-stars">${stars}</div>
+          <div class="gallery-tip">💡 ${r.remember}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+  gallery.classList.add('show');
+  fireConfetti();
+}
+
+window.addEventListener('beforeunload', () => { if (speechSynth) speechSynth.cancel(); });
+
+render();
+</script>
+
+</body>
+</html>
