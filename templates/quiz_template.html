@@ -269,20 +269,58 @@ function speak(text, btn) {
     if (currentSpeakingBtn) currentSpeakingBtn.classList.remove('speaking');
     if (currentSpeakingBtn === btn) { currentSpeakingBtn = null; return; }
   }
-  const cleanText = stripHtml(text);
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  utterance.lang = 'zh-CN';
-  utterance.rate = 0.9;
-  utterance.pitch = 1.0;
-  utterance.volume = 1.0;
-  if (preferredVoice) utterance.voice = preferredVoice;
+  // 清理文本：去 HTML、去多余空白、按句切分
+  let cleanText = stripHtml(text)
+    .replace(/[\n\r\t]+/g, '。')  // 换行变句号
+    .replace(/\s+/g, ' ')             // 多空格变单空格
+    .replace(/。+/g, '。')             // 多句号变单句号
+    .trim();
+  
+  if (!cleanText) {
+    showVoiceToast('没有内容可朗读');
+    return;
+  }
+  
+  // 长文本按句切分，分段朗读（Web Speech API 长文本会静音）
+  const sentences = cleanText.match(/[^。！？\?\!]+[。！？\?\!]*/g) || [cleanText];
+  
   if (btn) { btn.classList.add('speaking'); currentSpeakingBtn = btn; }
-  utterance.onend = () => { if (btn) btn.classList.remove('speaking'); currentSpeakingBtn = null; };
-  utterance.onerror = () => { if (btn) btn.classList.remove('speaking'); currentSpeakingBtn = null; };
-  speechSynth.speak(utterance);
+  
+  let idx = 0;
+  function speakNext() {
+    if (idx >= sentences.length) {
+      if (btn) btn.classList.remove('speaking');
+      currentSpeakingBtn = null;
+      return;
+    }
+    const part = sentences[idx].trim();
+    idx++;
+    if (!part) { speakNext(); return; }
+    const utterance = new SpeechSynthesisUtterance(part);
+    utterance.lang = 'zh-CN';
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    if (preferredVoice) utterance.voice = preferredVoice;
+    utterance.onend = () => speakNext();
+    utterance.onerror = (e) => {
+      console.warn('语音错误：', e);
+      speakNext();
+    };
+    speechSynth.speak(utterance);
+  }
+  
+  speakNext();
 }
 
 window.speakWord = function(wordIdx, btn) { speak(wordsData[wordIdx].word, btn); };
+window.speakPrompt = function(wordIdx, step, btn) {
+  const stepInfo = getCurrentStepData(wordIdx, step);
+  if (stepInfo && stepInfo.data && stepInfo.data.prompt) {
+    speak(stepInfo.data.prompt, btn);
+  }
+};
+
 window.speakText = function(text, btn) { speak(text, btn); };
 window.speakFeedback = function(btn) {
   const fb = document.getElementById('feedback');
@@ -413,7 +451,15 @@ function renderStepIndicator(wordIdx, currentStep) {
   }).join('')}</div>`;
 }
 
-function escapeJs(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"'); }
+function escapeJs(s) { 
+  return String(s)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, ' ')
+    .replace(/\r/g, ' ')
+    .replace(/\t/g, ' '); 
+}
 
 function render() {
   if (speechSynth && speechSynth.speaking) {
@@ -451,7 +497,7 @@ function render() {
         </div>` : ''}
       <div class="q-prompt-wrap">
         <div class="q-prompt">${data.prompt}</div>
-        <button class="speak-btn" onclick="speakText('${escapeJs(data.prompt)}', this)" title="听题目">🔊</button>
+        <button class="speak-btn" onclick="speakPrompt(${currentWordIdx}, ${currentStep}, this)" title="听题目">🔊</button>
       </div>
       <div class="options" id="options">
         ${data.options.map((opt, i) => `
