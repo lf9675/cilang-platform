@@ -62,39 +62,124 @@ with tab1:
                     st.markdown(f"**{unit}**")
                     for lid, lno, title in hierarchy[grade][unit]:
                         meta = db.get_questions_meta(lid)
-                        col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
-                        with col1:
-                            st.markdown(f"📖 **{lno} 《{title}》** (ID: {lid})")
-                        with col2:
-                            if meta:
-                                st.caption(f"✅ {meta['word_count']} 词 · {meta['step_count']} 关")
-                            else:
-                                st.caption("⚠️ 无题库")
-                        with col3:
-                            if st.button("✏️ 编辑", key=f"edit_{lid}"):
-                                st.session_state["editing_lesson_id"] = lid
-                                st.session_state["edit_tab"] = "tab3"
-                                st.rerun()
-                        with col4:
-                            if st.button("🗑 删除", key=f"del_{lid}"):
-                                st.session_state["confirm_delete_lesson"] = lid
-                                st.rerun()
+                        with st.container(border=True):
+                            col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
+                            with col1:
+                                st.markdown(f"📖 **{lno} 《{title}》** (ID: {lid})")
+                            with col2:
+                                if meta:
+                                    st.caption(f"✅ {meta['word_count']} 词 · {meta['step_count']} 关")
+                                else:
+                                    st.caption("⚠️ 无题库")
+                            with col3:
+                                edit_key = f"editing_open_{lid}"
+                                is_editing = st.session_state.get(edit_key, False)
+                                btn_label = "❌ 关闭" if is_editing else "✏️ 编辑"
+                                if st.button(btn_label, key=f"edit_{lid}", use_container_width=True):
+                                    st.session_state[edit_key] = not is_editing
+                                    st.rerun()
+                            with col4:
+                                if st.button("🗑 删除", key=f"del_{lid}", use_container_width=True):
+                                    st.session_state["confirm_delete_lesson"] = lid
+                                    st.rerun()
 
-                        # 二次确认
-                        if st.session_state.get("confirm_delete_lesson") == lid:
-                            st.warning(f"确定要删除 《{title}》 吗？删除后学生的历史成绩会保留，但学生看不到这一课了。")
-                            cc1, cc2, _ = st.columns([1, 1, 3])
-                            with cc1:
-                                if st.button("✅ 确定删除", key=f"do_del_{lid}", type="primary"):
-                                    db.delete_lesson(lid)
-                                    st.session_state.pop("confirm_delete_lesson", None)
-                                    st.success("已删除")
-                                    st.rerun()
-                            with cc2:
-                                if st.button("取消", key=f"cancel_del_{lid}"):
-                                    st.session_state.pop("confirm_delete_lesson", None)
-                                    st.rerun()
-                    st.markdown("")
+                            # 二次确认删除
+                            if st.session_state.get("confirm_delete_lesson") == lid:
+                                st.warning(f"确定要删除 《{title}》 吗？删除后学生的历史成绩会保留，但学生看不到这一课了。")
+                                cc1, cc2, _ = st.columns([1, 1, 3])
+                                with cc1:
+                                    if st.button("✅ 确定删除", key=f"do_del_{lid}", type="primary"):
+                                        db.delete_lesson(lid)
+                                        st.session_state.pop("confirm_delete_lesson", None)
+                                        st.session_state.pop(f"editing_open_{lid}", None)
+                                        st.success("已删除")
+                                        st.rerun()
+                                with cc2:
+                                    if st.button("取消", key=f"cancel_del_{lid}"):
+                                        st.session_state.pop("confirm_delete_lesson", None)
+                                        st.rerun()
+
+                            # 内嵌编辑区
+                            if st.session_state.get(f"editing_open_{lid}", False):
+                                st.markdown("---")
+                                st.markdown(f"### ✏️ 编辑 《{title}》 的题库")
+
+                                existing = db.get_questions(lid)
+                                if existing:
+                                    import json as _json
+                                    current_json = _json.dumps(existing, ensure_ascii=False, indent=2)
+                                    st.success(f"✅ 当前题库有 **{len(existing)}** 个词语")
+                                else:
+                                    current_json = ""
+                                    st.info("📝 这一课还没有题库，请在下方粘贴 JSON")
+
+                                edit_text_key = f"edit_json_{lid}"
+                                edited_json = st.text_area(
+                                    "📋 直接修改下面的 JSON，然后点「💾 保存修改」",
+                                    value=current_json,
+                                    height=400,
+                                    key=edit_text_key,
+                                    help="可以直接在这里改题目、改解释、改正确答案等"
+                                )
+
+                                btn_cols = st.columns([1, 1, 2])
+                                with btn_cols[0]:
+                                    if st.button("💾 保存修改", key=f"save_{lid}", type="primary", use_container_width=True):
+                                        if not edited_json.strip():
+                                            st.error("❌ 内容不能为空")
+                                        else:
+                                            # 用同样的 4 层 JSON 解析逻辑
+                                            import json as _json
+                                            import re as _re
+                                            parsed = None
+                                            try:
+                                                parsed = _json.loads(edited_json.strip())
+                                            except _json.JSONDecodeError:
+                                                cleaned = edited_json.strip()
+                                                if cleaned.startswith("```"):
+                                                    lines = cleaned.split("\n")
+                                                    if lines[0].startswith("```"):
+                                                        lines = lines[1:]
+                                                    if lines and lines[-1].strip() == "```":
+                                                        lines = lines[:-1]
+                                                    cleaned = "\n".join(lines)
+                                                try:
+                                                    parsed = _json.loads(cleaned)
+                                                except _json.JSONDecodeError:
+                                                    match = _re.search(r"\[\s*\{[\s\S]*\}\s*\]", edited_json)
+                                                    if match:
+                                                        try:
+                                                            parsed = _json.loads(match.group(0))
+                                                        except _json.JSONDecodeError:
+                                                            pass
+
+                                            if parsed is None:
+                                                st.error("❌ JSON 格式错误，请检查括号是否匹配、引号是否成对")
+                                            elif not isinstance(parsed, list) or len(parsed) == 0:
+                                                st.error("❌ JSON 必须是非空数组（以 `[` 开头）")
+                                            else:
+                                                ok, msg = db.save_questions(lid, parsed, teacher["teacher_id"])
+                                                if ok:
+                                                    st.success(f"✅ {msg}")
+                                                    st.balloons()
+                                                    # 不关闭编辑窗口，方便继续修改
+                                                else:
+                                                    st.error(msg)
+                                with btn_cols[1]:
+                                    if st.button("👁 预览当前", key=f"preview_{lid}", use_container_width=True):
+                                        st.session_state[f"show_preview_{lid}"] = not st.session_state.get(f"show_preview_{lid}", False)
+                                        st.rerun()
+
+                                # 预览模式
+                                if st.session_state.get(f"show_preview_{lid}", False) and existing:
+                                    st.markdown("---")
+                                    st.markdown("**📋 当前题库预览**")
+                                    for i, q in enumerate(existing, 1):
+                                        diff = "🔴 难" if q.get("difficulty") == "hard" else "🟢 简"
+                                        st.markdown(f"**{i}. {q['word']}** {diff}")
+                                        with st.expander(f"展开看 {q['word']} 的题目"):
+                                            st.json(q)
+                        st.markdown("")
 
 
 # ==================== Tab 2: 创建课文 ====================
