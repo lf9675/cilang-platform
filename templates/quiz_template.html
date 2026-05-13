@@ -220,7 +220,55 @@ body {
 <script>
 // ===== 数据注入点（由 Streamlit 替换）=====
 const QUIZ_CONTEXT = __QUIZ_CONTEXT__;
-const wordsData = __WORDS_DATA__;
+const wordsDataRaw = __WORDS_DATA__;
+
+// ===== 打乱逻辑（防作弊 v6）=====
+function fisherYates(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function shuffleOptionsInQuestion(q) {
+  // 对一个 meaning/usage/trap 对象的 options 进行洗牌，同时更新 correct 索引
+  // 同时更新 whyCorrect / whyWrong 里的 A/B/C 引用（若有）
+  if (!q || !q.options || q.correct === undefined) return q;
+  
+  const oldOptions = [...q.options];
+  const oldCorrect = q.correct;
+  const indices = [0, 1, 2];
+  const shuffledIndices = fisherYates(indices);
+  
+  const newOptions = shuffledIndices.map(i => oldOptions[i]);
+  const newCorrect = shuffledIndices.indexOf(oldCorrect);
+  
+  return {
+    ...q,
+    options: newOptions,
+    correct: newCorrect,
+    _originalOptions: oldOptions,        // 保留原始顺序（上传给老师后台）
+    _shuffleMap: shuffledIndices         // 记录映射关系 [新位置i] = 原位置
+  };
+}
+
+function shuffleWordData(words) {
+  // 1. 打乱词语顺序
+  const shuffledWords = fisherYates(words);
+  
+  // 2. 每个词的每个关卡，打乱选项顺序
+  return shuffledWords.map(w => {
+    const newW = {...w};
+    if (newW.meaning) newW.meaning = shuffleOptionsInQuestion(newW.meaning);
+    if (newW.usage) newW.usage = shuffleOptionsInQuestion(newW.usage);
+    if (newW.trap) newW.trap = shuffleOptionsInQuestion(newW.trap);
+    return newW;
+  });
+}
+
+const wordsData = shuffleWordData(wordsDataRaw);
 // ===========================================
 
 // 设置课文信息显示
@@ -353,11 +401,13 @@ function saveAttempts(arr) {
   try { sessionStorage.setItem(ATTEMPTS_KEY, JSON.stringify(arr)); } catch(e) {}
 }
 
-function recordAttempt(word, stepType, isCorrect, chosenIdx, correctIdx) {
+function recordAttempt(word, stepType, isCorrect, chosenIdx, correctIdx, chosenContent, correctContent) {
   const attempts = loadAttempts();
   attempts.push({
     word, step_type: stepType, is_correct: isCorrect,
     chosen_idx: chosenIdx, correct_idx: correctIdx,
+    chosen_content: chosenContent || '',     // 学生选的实际内容
+    correct_content: correctContent || '',   // 正确答案的实际内容
     answered_at: new Date().toISOString()
   });
   saveAttempts(attempts);
@@ -527,7 +577,11 @@ window.selectAnswer = function(chosenIdx) {
   if (isCorrect) { totalCorrect++; starsEarned++; wordStarsTracker++; showStarBurst(); }
 
   // 记录答题
-  recordAttempt(wordsData[currentWordIdx].word, stepInfo.type, isCorrect, chosenIdx, data.correct);
+  // 提取选项内容（去 HTML 标签，保留语义）
+  const cleanOpt = (s) => String(s).replace(/<u>/g, '').replace(/<\/u>/g, '');
+  const chosenContent = cleanOpt(data.options[chosenIdx]);
+  const correctContent = cleanOpt(data.options[data.correct]);
+  recordAttempt(wordsData[currentWordIdx].word, stepInfo.type, isCorrect, chosenIdx, data.correct, chosenContent, correctContent);
 
   document.querySelectorAll('.option').forEach((el, i) => {
     el.classList.add('disabled');
