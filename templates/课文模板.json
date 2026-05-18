@@ -1,0 +1,193 @@
+{
+  "lesson_meta": {
+    "lesson_id": 0,
+    "title_cn": "【填课文中文标题】",
+    "title_en": "【填英文标题，可选】",
+    "source": "【填课文出处，可选，如：原文｜《xxx》(改编) · Adapted】",
+    "grade": "Sec 2",
+    "unit": "单元X",
+    "lesson_no": "第X课",
+    "lesson_type": "narrative"
+  },
+  "story": {
+    "title": "【课文标题】",
+    "titleEn": "【ENGLISH TITLE】",
+    "paragraphs": [
+      "【第一段全文】",
+      "【第二段全文】",
+      "【第三段全文……以此类推，保留原文标点】"
+    ]
+  },
+  "terms": {
+    "【学术术语1，如：抒情句】": {
+      "en": "【English explanation — short, ~10 words】"
+    },
+    "【学术术语2，如：议论句】": {
+      "en": "【English explanation】"
+    },
+    "【课文难词1】": {
+      "en": "【meaning】"
+    }
+  },
+  "quiz": [
+    {
+      "phase": "phase-1",
+      "phaseName": "第一案：鸟瞰全局",
+      "phaseNameEn": "Case 1: The Big Picture",
+      "phaseSubtitle": "PHASE 1 — BIG PICTURE",
+      "phaseIntro": {
+        "icon": "🌐",
+        "title": "案件简报：先看全局",
+        "titleEn": "BRIEFING — See the Whole Picture First",
+        "desc": "【这一关的引导语，可用 <term>主题</term> 标蓝色虚线】",
+        "descEn": "【English intro】",
+        "skills": [
+          "通读全文",
+          "理清脉络",
+          "推出主题"
+        ]
+      },
+      "readBefore": true,
+      "questions": [
+        {
+          "_comment": "===== 题型示范 1: choice 普通单选 =====",
+          "id": "Q1",
+          "skill": "S0",
+          "type": "choice",
+          "skillTagText": "能力点·【填能力点中文】",
+          "skillTagEn": "SKILL · 【English label】",
+          "prompt": "【题干，可用 <term>...</term> 包学术词】",
+          "promptEn": "【English question】",
+          "options": [
+            "【选项A】",
+            "【选项B】",
+            "【选项C】"
+          ],
+          "optionsEn": [
+            "A...",
+            "B...",
+            "C..."
+          ],
+          "correct": 0,
+          "explanation": "【解释，可用 <strong>...</strong> 加粗、<term>...</term> 标术语】",
+          "explanationEn": "【English explanation】"
+        },
+        {
+          "_comment": "===== 题型示范 2: short_answer 开放短答题（每个 phase 最后一题用这个）=====",
+          "id": "Q5",
+          "skill": "S0",
+          "type": "short_answer",
+          "skillTagText": "能力点·【填能力点】（开放思考）",
+          "skillTagEn": "SKILL · xx (open)",
+          "prompt": "【开放性题干，逼学生思考『为什么/有什么作用』】",
+          "promptEn": "【Open-ended question】",
+          "wordLimit": "40-80 字",
+          "keywords": [
+            "关键词1",
+            "关键词2",
+            "关键词3",
+            "关键词4",
+            "关键词5",
+            "关键词6",
+            "关键词7",
+            "关键词8"
+          ],
+          "minKeywords": 2,
+          "sampleAnswer": "【参考答案，不是唯一正确答案】",
+          "sampleAnswerEn": "【Sample answer】",
+          "hint": "【学生卡住时看的提示，可用 <strong>...</strong>】"
+        }
+      ]
+    },
+    {
+      "phase": "phase-2a",
+      "phaseName": "第二案·档案一：人物反应",
+      "phaseNameEn": "Case 2 · File 1: Character Reactions",
+      "phaseSubtitle": "PHASE 2A — CHARACTER REACTIONS",
+      "phaseIntro": {
+        "icon": "😨",
+        "title": "档案一：人物的反应",
+        "titleEn": "FILE 1 — How They React",
+        "desc": "【引导语】",
+        "descEn": "【English intro】",
+        "skills": [
+          "读出反应",
+          "推出心理"
+        ]
+      },
+      "questions": []
+    },
+    {
+      "phase": "phase-2b",
+      "phaseName": "第二案·档案二:人物描写",
+      "phaseNameEn": "Case 2 · File 2: Character Description",
+      "phaseSubtitle": "PHASE 2B — CHARACTER DESCRIPTION",
+      "phaseIntro": {
+        "icon": "👤",
+        "title": "档案二：人物描写",
+        "titleEn": "FILE 2 — Character Description",
+        "desc": "【引导语：神态/动作/语言/心理描写】",
+        "descEn": "【English intro】",
+        "skills": [
+          "识别描写手法",
+          "分析人物形象"
+        ]
+      },
+      "questions": []
+    },
+    {
+      "phase": "phase-2c",
+      "phaseName": "第二案·档案三：修辞与句子",
+      "phaseNameEn": "Case 2 · File 3: Rhetoric & Sentences",
+      "phaseSubtitle": "PHASE 2C — RHETORIC & SENTENCES",
+      "phaseIntro": {
+        "icon": "🎨",
+        "title": "档案三：修辞与句子",
+        "titleEn": "FILE 3 — Rhetoric & Sentences",
+        "desc": "【引导语：夸张、比喻、拟人……】",
+        "descEn": "【English intro】",
+        "skills": [
+          "识别修辞",
+          "分析句子作用"
+        ]
+      },
+      "questions": []
+    },
+    {
+      "phase": "phase-2d",
+      "phaseName": "第二案·档案四：言外之意",
+      "phaseNameEn": "Case 2 · File 4: Implied Meaning",
+      "phaseSubtitle": "PHASE 2D — IMPLIED MEANING",
+      "phaseIntro": {
+        "icon": "💭",
+        "title": "档案四：言外之意",
+        "titleEn": "FILE 4 — Reading Between the Lines",
+        "desc": "【引导语：作者真正想说的】",
+        "descEn": "【English intro】",
+        "skills": [
+          "读出潜台词",
+          "识别反讽双关"
+        ]
+      },
+      "questions": []
+    },
+    {
+      "phase": "phase-2e",
+      "phaseName": "第二案·档案五：作者观点",
+      "phaseNameEn": "Case 2 · File 5: Author's View",
+      "phaseSubtitle": "PHASE 2E — AUTHOR'S VIEW",
+      "phaseIntro": {
+        "icon": "🎯",
+        "title": "档案五：作者的观点",
+        "titleEn": "FILE 5 — The Author's View",
+        "desc": "【引导语：抒情句、议论句、中心思想】",
+        "descEn": "【English intro】",
+        "skills": [
+          "找抒情议论句",
+          "归纳中心思想"
+        ]
+      },
+      "questions": []
+    }
+  ]
+}
