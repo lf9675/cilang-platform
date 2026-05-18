@@ -96,13 +96,34 @@ def render_lesson_selector():
     info = st.session_state.student_info
     render_hero()
 
-    # 顶部欢迎
-    with st.container(border=True):
-        st.markdown(f"### 👋 {info['student_name']} 同学，欢迎你！")
-        st.caption(f"班级 {info['class_name']} · 学号 {info['student_id']}")
-        if st.button("切换其他同学", help="如果你不是这位同学"):
-            st.session_state.student_info = None
-            st.rerun()
+    # 顶部欢迎 + 班级龙虎榜（左右两栏）
+    top_left, top_right = st.columns([3, 2])
+
+    with top_left:
+        with st.container(border=True):
+            st.markdown(f"### 👋 {info['student_name']} 同学，欢迎你！")
+            st.caption(f"班级 {info['class_name']} · 学号 {info['student_id']}")
+            if st.button("切换其他同学", help="如果你不是这位同学"):
+                st.session_state.student_info = None
+                st.rerun()
+
+    with top_right:
+        # 班级正确率龙虎榜 Top 5（v7.1 新增）
+        with st.container(border=True):
+            st.markdown(f"#### 🐲 班级龙虎榜 · {info['class_name']}")
+            st.caption("本周正确率前 5 名")
+            lb_preview = db.get_class_leaderboard(info["class_name"])
+            top5 = lb_preview.get("zhun", [])
+            if not top5:
+                st.caption("📭 还没有数据，做题就有机会上榜~")
+            else:
+                medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
+                for rank, (name, value) in enumerate(top5):
+                    is_me = name == info["student_name"]
+                    if is_me:
+                        st.markdown(f"**{medals[rank]} {name}** · {value} ← 是你！")
+                    else:
+                        st.markdown(f"{medals[rank]} {name} · {value}")
 
     # ====== 个人进步卡片 ======
     progress = db.get_student_progress_vs_last_week(info["class_name"], info["student_id"])
@@ -136,19 +157,19 @@ def render_lesson_selector():
             st.info("👍 做了更多题，继续加油！")
 
     # ====== 班级冠军榜 ======
+    # v7.1 调整：删除「答题最准」奖项（已升级为右上角龙虎榜 Top 5），避免重复
     leaderboard = db.get_class_leaderboard(info["class_name"])
     
-    has_any = any(leaderboard[k] for k in leaderboard)
+    has_any = any(leaderboard[k] for k in leaderboard if k != "zhun")
     if has_any:
         with st.container(border=True):
             st.markdown(f"### 🏆 本周班级冠军榜 · {info['class_name']}")
             st.caption("📅 每周一 00:00 重置，周日晚 11:59 公布冠军")
             
-            tab_labels = ["🏆 闯关之王", "🎯 答题最准", "📈 进步之星", "🌟 坚持小达人", "⚡ 挑战大师"]
-            tab_keys = ["wang", "zhun", "jinbu", "jianchi", "tiaozhan"]
+            tab_labels = ["🏆 闯关之王", "📈 进步之星", "🌟 坚持小达人", "⚡ 挑战大师"]
+            tab_keys = ["wang", "jinbu", "jianchi", "tiaozhan"]
             tab_caption = {
                 "wang": "完成不同课文最多",
-                "zhun": "答题正确率最高",
                 "jinbu": "比上周进步最多",
                 "jianchi": "做题天数最多",
                 "tiaozhan": "答对挑战关词语最多"
@@ -172,20 +193,20 @@ def render_lesson_selector():
                                 st.markdown(f"{medals[rank]} {name} · {value}")
     
     # ====== 上周冠军墙（简化版）======
+    # v7.1 调整：删除「答题最准」，因为已升级为右上角龙虎榜（Top 5 在本周已实时展示）
     last_champs = db.get_last_week_champions(info["class_name"])
     if last_champs:
         with st.expander("🏅 上周冠军墙", expanded=False):
-            cols = st.columns(3)
+            cols = st.columns(2)
             champ_labels = {
                 "wang": ("🏆", "闯关之王"),
-                "zhun": ("🎯", "答题最准"),
                 "jianchi": ("🌟", "坚持小达人")
             }
             shown = 0
             for key, (emoji, label) in champ_labels.items():
                 if key in last_champs:
                     name, value = last_champs[key]
-                    with cols[shown % 3]:
+                    with cols[shown % 2]:
                         st.markdown(f"**{emoji} {label}**")
                         st.markdown(f"{name}")
                         st.caption(value)
