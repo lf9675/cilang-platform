@@ -3,7 +3,7 @@ app.py - 词语闯关平台 学生入口
 功能：登录 → 选课文 → 进入闯关 → 提交成绩
 
 v7.1 路由规则：
-- 默认（裸 URL）：学生身份，侧边栏只显示「词语闯关」+「核心课文」
+- 默认（裸 URL）：学生身份，侧边栏只显示「课文词语闯关」+「课文理解」
 - ?role=teacher：老师身份，自动跳转老师后台，侧边栏显示全部页面
 """
 import streamlit as st
@@ -34,8 +34,8 @@ if _is_teacher:
     st.switch_page("pages/2_📊_老师后台.py")
 
 # ====== 学生身份：用 CSS 隐藏老师页面的侧边栏链接 ======
-# 侧边栏页面顺序：1.app(当前页) 2.老师后台 3.题库管理 4.核心课文 5.阅读理解管理
-# 学生只能看到：app(词语闯关入口) 和 核心课文（侦探闯关）
+# 侧边栏页面顺序：1.app(当前页) 2.老师后台 3.题库管理 4.课文理解 5.阅读理解管理
+# 学生只能看到：app(词语闯关入口) 和 课文理解（侦探闯关）
 # 老师页面（2、3、5）隐藏，学生即使硬闯也会被 auth.require_teacher() 拦住
 st.markdown("""
 <style>
@@ -44,6 +44,20 @@ st.markdown("""
 [data-testid="stSidebarNav"] ul li:nth-child(3),
 [data-testid="stSidebarNav"] ul li:nth-child(5) {
     display: none !important;
+}
+
+/* v7.1：把侧边栏第一个链接的文字「app」改成「课文词语闯关」 */
+[data-testid="stSidebarNav"] ul li:first-child a span {
+    visibility: hidden;
+    position: relative;
+}
+[data-testid="stSidebarNav"] ul li:first-child a span::after {
+    content: "课文词语闯关";
+    visibility: visible;
+    position: absolute;
+    left: 0;
+    top: 0;
+    white-space: nowrap;
 }
 </style>
 """, unsafe_allow_html=True)
