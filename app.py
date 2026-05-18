@@ -47,16 +47,13 @@ st.markdown("""
 }
 
 /* v7.1：把侧边栏第一个链接的文字「app」改成「课文词语闯关」 */
+/* 用 font-size:0 隐藏原文字，::before 注入新文字（这种写法容器会自动撑开）*/
 [data-testid="stSidebarNav"] ul li:first-child a span {
-    visibility: hidden;
-    position: relative;
+    font-size: 0;
 }
-[data-testid="stSidebarNav"] ul li:first-child a span::after {
+[data-testid="stSidebarNav"] ul li:first-child a span::before {
     content: "课文词语闯关";
-    visibility: visible;
-    position: absolute;
-    left: 0;
-    top: 0;
+    font-size: 14px;
     white-space: nowrap;
 }
 </style>
