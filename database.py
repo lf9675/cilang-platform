@@ -725,9 +725,9 @@ def get_last_week_champions(class_name: str) -> dict:
             return {}
 
         result = {}
+        # v7.1 调整：删除 zhun（答题最准），已升级为学生首页右上角龙虎榜 Top 5
         winners = {
             "wang": (max(students, key=lambda x: x["lessons"]), f"{max(students, key=lambda x: x['lessons'])['lessons']} 课"),
-            "zhun": (max(students, key=lambda x: x["accuracy"]), f"{max(students, key=lambda x: x['accuracy'])['accuracy']}%"),
             "jianchi": (max(students, key=lambda x: x["days"]), f"{max(students, key=lambda x: x['days'])['days']} 天"),
         }
 
