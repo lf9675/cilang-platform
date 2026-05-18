@@ -1,6 +1,10 @@
 """
 app.py - 词语闯关平台 学生入口
 功能：登录 → 选课文 → 进入闯关 → 提交成绩
+
+v7.1 路由规则：
+- 默认（裸 URL）：学生身份，侧边栏只显示「词语闯关」+「核心课文」
+- ?role=teacher：老师身份，自动跳转老师后台，侧边栏显示全部页面
 """
 import streamlit as st
 import streamlit.components.v1 as components
@@ -13,12 +17,36 @@ from pathlib import Path
 # 初始化数据库（首次启动）
 db.init_db()
 
+# ====== v7.1：角色路由（必须在 set_page_config 之后才能用 query_params）======
+# 先读 URL 参数判断角色
+_role = st.query_params.get("role", "student")  # 默认学生
+_is_teacher = (_role == "teacher")
+
 st.set_page_config(
     page_title="词语闯关 · 培养好习惯",
     page_icon="📖",
     layout="centered",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded" if _is_teacher else "collapsed"
 )
+
+# 老师身份 → 自动跳转老师后台
+if _is_teacher:
+    st.switch_page("pages/2_📊_老师后台.py")
+
+# ====== 学生身份：用 CSS 隐藏老师页面的侧边栏链接 ======
+# 侧边栏页面顺序：1.app(当前页) 2.老师后台 3.题库管理 4.核心课文 5.阅读理解管理
+# 学生只能看到：app(词语闯关入口) 和 核心课文（侦探闯关）
+# 老师页面（2、3、5）隐藏，学生即使硬闯也会被 auth.require_teacher() 拦住
+st.markdown("""
+<style>
+/* 隐藏老师专属页面：老师后台(2)、题库管理(3)、阅读理解管理(5) */
+[data-testid="stSidebarNav"] ul li:nth-child(2),
+[data-testid="stSidebarNav"] ul li:nth-child(3),
+[data-testid="stSidebarNav"] ul li:nth-child(5) {
+    display: none !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # 防止 Streamlit toolbar 遮挡（华文通经验）
 st.markdown("""
@@ -83,12 +111,9 @@ def render_student_login():
                 }
                 st.rerun()
 
-    # 引导到老师后台
+    # 引导到老师后台（v7.1 改为弱化的小字提示，避免学生误点）
     st.markdown("---")
-    cols = st.columns([2, 1, 2])
-    with cols[1]:
-        if st.button("👩‍🏫 老师入口", use_container_width=True):
-            st.switch_page("pages/2_📊_老师后台.py")
+    st.caption("👩‍🏫 老师请使用专属链接：在网址后加 `?role=teacher` 进入老师后台")
 
 
 def render_lesson_selector():
