@@ -1,11 +1,15 @@
 """
-database.py - SQLite database operations for 词语闯关平台
+database.py - SQLite database operations for 词语闯关平台 + 阅读理解侦探闯关
+
 设计原则：
 - 用 WAL 模式提高并发性能
 - 短事务，避免长时间锁表
 - 软删除，避免学生数据丢失
 - 用 (class_name + student_id) 作为学生主键，不依赖姓名
+
+v2 新增：阅读理解侦探闯关相关功能(reading_lessons + detective_completions)
 """
+
 import sqlite3
 import json
 import hashlib
@@ -131,7 +135,7 @@ def init_db():
             )
         """)
 
-        # 老师-班级映射（一个老师负责哪些班级）
+        # 老师-班级映射
         c.execute("""
             CREATE TABLE IF NOT EXISTS teacher_classes (
                 teacher_id INTEGER NOT NULL,
@@ -148,24 +152,8 @@ def init_db():
         c.execute("CREATE INDEX IF NOT EXISTS idx_sessions_teacher ON sessions(teacher_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_lessons_grade ON lessons(grade, unit, lesson_no)")
 
-        # ==================== 核心课文（侦探闯关，v7 新增）====================
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS detective_records (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                class_name TEXT NOT NULL,
-                student_id TEXT NOT NULL,
-                student_name TEXT,
-                lesson_id INTEGER NOT NULL,
-                badges_earned INTEGER NOT NULL,
-                completion_code TEXT NOT NULL,
-                self_rating INTEGER,
-                one_line_summary TEXT,
-                submitted_at TEXT NOT NULL,
-                UNIQUE(class_name, student_id, lesson_id),
-                FOREIGN KEY (lesson_id) REFERENCES lessons(lesson_id)
-            )
-        """)
-        c.execute("CREATE INDEX IF NOT EXISTS idx_detective_class_lesson ON detective_records(class_name, lesson_id)")
+    # 初始化阅读理解相关的表(v2 新增)
+    init_reading_lessons_tables()
 
 
 # ==================== 老师相关 ====================
@@ -184,7 +172,6 @@ def register_teacher(username: str, password: str, display_name: str) -> tuple[b
     """老师注册。返回 (成功, 消息)"""
     username = username.strip()
     display_name = display_name.strip()
-
     if not username or not password or not display_name:
         return False, "用户名、密码、显示名称都不能为空"
     if len(password) < 6:
@@ -231,7 +218,6 @@ def get_teacher_classes(teacher_id: int) -> list[str]:
 
 
 def add_teacher_class(teacher_id: int, class_name: str) -> bool:
-    """老师添加自己负责的班级"""
     class_name = class_name.strip()
     if not class_name:
         return False
@@ -285,7 +271,6 @@ def create_lesson(grade: str, unit: str, lesson_no: str, title: str, teacher_id:
     title = title.strip()
     if not all([grade, unit, lesson_no, title]):
         return None
-
     try:
         with get_conn() as conn:
             c = conn.cursor()
@@ -478,6 +463,7 @@ def get_word_error_stats(teacher_id: int, lesson_id: int = None) -> list[dict]:
 
         placeholders = ",".join(["?"] * len(teacher_classes))
         params = list(teacher_classes)
+
         where_extra = ""
         if lesson_id:
             where_extra = " AND a.lesson_id = ?"
@@ -519,7 +505,6 @@ def get_week_range(reference_date=None):
     monday = reference_date - timedelta(days=reference_date.weekday())
     monday = monday.replace(hour=0, minute=0, second=0, microsecond=0)
     sunday = monday + timedelta(days=6, hours=23, minutes=59, seconds=59)
-
     return monday, sunday
 
 
@@ -612,7 +597,6 @@ def get_class_leaderboard(class_name: str) -> dict:
 
     with get_conn() as conn:
         c = conn.cursor()
-
         c.execute("""
             SELECT class_name, student_id, student_name,
                    COUNT(DISTINCT lesson_id) as lessons_completed,
@@ -650,17 +634,17 @@ def get_class_leaderboard(class_name: str) -> dict:
               AND a.step_type = 'trap'
             GROUP BY a.class_name, a.student_id, a.student_name
         """, (class_name, week_start.isoformat(), week_end.isoformat()))
-
         hard_word_map = {}
         for row in c.fetchall():
             key = (row["class_name"], row["student_id"])
             hard_word_map[key] = (row["student_name"], row["hard_words"])
 
+        from datetime import datetime as _dt, timezone as _tz, timedelta as _td
         progress_list = []
         for s in students:
             last_week_stats = get_student_weekly_stats(
                 class_name, s["student_id"],
-                ref_date=__import__('datetime').datetime.now(__import__('datetime').timezone(__import__('datetime').timedelta(hours=8))) - __import__('datetime').timedelta(days=7)
+                ref_date=_dt.now(_tz(_td(hours=8))) - _td(days=7)
             )
             delta = s["accuracy"] - last_week_stats["accuracy"]
             if last_week_stats["lessons_completed"] >= 1:
@@ -687,9 +671,10 @@ def get_class_leaderboard(class_name: str) -> dict:
 
 
 def get_last_week_champions(class_name: str) -> dict:
-    """获取上周冠军（如已归档，从归档表读；如未归档，实时计算并归档）"""
+    """获取上周冠军"""
     from datetime import datetime, timedelta, timezone
     sg_tz = timezone(timedelta(hours=8))
+
     last_week_ref = datetime.now(sg_tz) - timedelta(days=7)
     year, week, _ = last_week_ref.isocalendar()
     year_week = f"{year}-W{week:02d}"
@@ -709,9 +694,6 @@ def get_last_week_champions(class_name: str) -> dict:
             return archived
 
         week_start, week_end = get_last_week_range()
-
-    with get_conn() as conn:
-        c = conn.cursor()
         c.execute("""
             SELECT class_name, student_id, student_name,
                    COUNT(DISTINCT lesson_id) as lessons,
@@ -778,6 +760,7 @@ def get_class_overall_stats(class_name: str) -> dict:
               AND completed_at >= ? AND completed_at <= ?
         """, (class_name, week_start.isoformat(), week_end.isoformat()))
         row = c.fetchone()
+
         completed = row["completed_students"] or 0
         covered = row["covered_lessons"] or 0
         avg_acc = round(row["total_correct"] * 100.0 / row["total_steps"], 1) if row["total_steps"] else 0
@@ -804,6 +787,7 @@ def get_class_overall_stats(class_name: str) -> dict:
             ORDER BY (wrong * 1.0 / attempts) DESC
             LIMIT 5
         """, (class_name, week_start.isoformat(), week_end.isoformat()))
+
         difficult_words = []
         for row in c.fetchall():
             err_rate = round(row["wrong"] * 100.0 / row["attempts"], 1)
@@ -823,71 +807,230 @@ def get_class_overall_stats(class_name: str) -> dict:
         }
 
 
-# ==================== 侦探闯关记录（v7 新增） ====================
+# ==================================================================
+# v2 新增：阅读理解侦探闯关相关
+# ==================================================================
 
-def save_detective_record(class_name: str, student_id: str, student_name: str,
-                          lesson_id: int, badges_earned: int, completion_code: str,
-                          self_rating: int, one_line_summary: str) -> tuple[bool, str]:
-    """保存学生侦探闯关成绩（同一学生同课会覆盖）"""
+def init_reading_lessons_tables():
+    """初始化阅读理解相关的表(在 init_db 末尾自动调用)"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        # 阅读理解课文表(独立于词语闯关的 lessons 表)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS reading_lessons (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title_cn TEXT NOT NULL,
+                title_en TEXT,
+                source TEXT,
+                grade TEXT,
+                unit TEXT,
+                lesson_no TEXT,
+                lesson_type TEXT,
+                content_json TEXT NOT NULL,
+                created_by_teacher_id INTEGER,
+                is_published INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY (created_by_teacher_id) REFERENCES teachers(teacher_id)
+            )
+        """)
+        # 侦探闯关完成记录表
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS detective_completions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                class_name TEXT NOT NULL,
+                student_id TEXT NOT NULL,
+                student_name TEXT NOT NULL,
+                reading_lesson_id INTEGER NOT NULL,
+                completion_code TEXT NOT NULL,
+                badges_earned INTEGER,
+                submitted_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY (reading_lesson_id) REFERENCES reading_lessons(id)
+            )
+        """)
+        c.execute("CREATE INDEX IF NOT EXISTS idx_reading_completion_student ON detective_completions(class_name, student_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_reading_lessons_grade ON reading_lessons(grade, unit, lesson_no)")
+
+
+def create_reading_lesson(title_cn: str, title_en: str, source: str,
+                          grade: str, unit: str, lesson_no: str,
+                          lesson_type: str, content_json: str,
+                          teacher_id: int) -> int | None:
+    """创建新阅读理解课文,返回 lesson_id"""
     try:
         with get_conn() as conn:
             c = conn.cursor()
             c.execute("""
-                INSERT OR REPLACE INTO detective_records
-                (class_name, student_id, student_name, lesson_id,
-                 badges_earned, completion_code, self_rating, one_line_summary, submitted_at)
+                INSERT INTO reading_lessons
+                (title_cn, title_en, source, grade, unit, lesson_no, lesson_type,
+                 content_json, created_by_teacher_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (class_name, student_id, student_name, lesson_id,
-                  badges_earned, completion_code, self_rating, one_line_summary,
-                  datetime.now().isoformat()))
-            return True, "提交成功"
-    except Exception as e:
-        return False, f"保存失败：{str(e)}"
+            """, (title_cn, title_en, source, grade, unit, lesson_no, lesson_type,
+                  content_json, teacher_id))
+            return c.lastrowid
+    except Exception:
+        return None
 
 
-def get_detective_record(class_name: str, student_id: str, lesson_id: int) -> dict | None:
-    """查询学生是否已完成某课侦探闯关"""
+def update_reading_lesson_content(lesson_id: int, content_json: str):
+    """更新阅读理解课文的题目 JSON"""
     with get_conn() as conn:
         c = conn.cursor()
         c.execute("""
-            SELECT badges_earned, self_rating, one_line_summary, submitted_at
-            FROM detective_records
-            WHERE class_name = ? AND student_id = ? AND lesson_id = ?
-        """, (class_name, student_id, lesson_id))
-        row = c.fetchone()
-        return dict(row) if row else None
+            UPDATE reading_lessons
+            SET content_json = ?, updated_at = datetime('now')
+            WHERE id = ?
+        """, (content_json, lesson_id))
 
 
-def get_class_detective_records(teacher_id: int, lesson_id: int = None) -> list[dict]:
-    """老师后台查询：班级侦探闯关进度（按老师 class 过滤）"""
-    teacher_classes = get_teacher_classes(teacher_id)
-    if not teacher_classes:
-        return []
+def update_reading_lesson_meta(lesson_id: int, title_cn: str, title_en: str,
+                                source: str, grade: str, unit: str,
+                                lesson_no: str, lesson_type: str):
+    """更新阅读理解课文的元信息"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        c.execute("""
+            UPDATE reading_lessons
+            SET title_cn = ?, title_en = ?, source = ?,
+                grade = ?, unit = ?, lesson_no = ?, lesson_type = ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+        """, (title_cn, title_en, source, grade, unit, lesson_no, lesson_type, lesson_id))
 
-    placeholders = ",".join(["?"] * len(teacher_classes))
-    params = list(teacher_classes)
-    where_extra = ""
-    if lesson_id:
-        where_extra = " AND d.lesson_id = ?"
-        params.append(lesson_id)
+
+def list_reading_lessons(only_published: bool = True) -> list[dict]:
+    """列出所有阅读理解课文"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        sql = """
+            SELECT id, title_cn, title_en, source, grade, unit, lesson_no,
+                   lesson_type, content_json, is_published, created_at
+            FROM reading_lessons
+        """
+        if only_published:
+            sql += " WHERE is_published = 1"
+        sql += " ORDER BY grade, unit, lesson_no"
+
+        rows = c.execute(sql).fetchall()
+        results = []
+        for r in rows:
+            try:
+                content = json.loads(r["content_json"])
+                quiz = content.get('quiz', [])
+                total_q = sum(len(p.get('questions', [])) for p in quiz)
+            except Exception:
+                total_q = 0
+            results.append({
+                'id': r['id'],
+                'title_cn': r['title_cn'],
+                'title_en': r['title_en'],
+                'source': r['source'],
+                'grade': r['grade'],
+                'unit': r['unit'],
+                'lesson_no': r['lesson_no'],
+                'lesson_type': r['lesson_type'],
+                'is_published': r['is_published'],
+                'total_questions': total_q,
+                'created_at': r['created_at']
+            })
+        return results
+
+
+def get_reading_lesson(lesson_id: int) -> dict | None:
+    """读取一个完整的阅读理解课文(用来注入 detective_template.html)"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        row = c.execute("""
+            SELECT id, title_cn, title_en, source, grade, unit, lesson_no,
+                   lesson_type, content_json
+            FROM reading_lessons WHERE id = ?
+        """, (lesson_id,)).fetchone()
+        if not row:
+            return None
+        try:
+            content = json.loads(row['content_json'])
+        except json.JSONDecodeError:
+            return None
+        # 确保 lesson_meta 字段存在
+        if 'lesson_meta' not in content:
+            content['lesson_meta'] = {}
+        content['lesson_meta'].update({
+            'lesson_id': row['id'],
+            'title_cn': row['title_cn'],
+            'title_en': row['title_en'] or '',
+            'source': row['source'] or '',
+            'grade': row['grade'] or '',
+            'unit': row['unit'] or '',
+            'lesson_no': row['lesson_no'] or '',
+            'lesson_type': row['lesson_type'] or 'narrative'
+        })
+        return content
+
+
+def delete_reading_lesson(lesson_id: int):
+    """删除一篇阅读理解课文(同时删除完成记录)"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        c.execute("DELETE FROM detective_completions WHERE reading_lesson_id = ?", (lesson_id,))
+        c.execute("DELETE FROM reading_lessons WHERE id = ?", (lesson_id,))
+
+
+def toggle_reading_lesson_publish(lesson_id: int, is_published: bool):
+    """切换课文的发布状态"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        c.execute("""
+            UPDATE reading_lessons SET is_published = ?, updated_at = datetime('now')
+            WHERE id = ?
+        """, (1 if is_published else 0, lesson_id))
+
+
+def record_detective_completion(class_name: str, student_id: str, student_name: str,
+                                 lesson_id: int, completion_code: str,
+                                 badges_earned: int = None):
+    """记录学生完成侦探闯关"""
+    if badges_earned is None:
+        # 从完成码尾部解析徽章数(格式 DT-XXXX-N)
+        try:
+            badges_earned = int(completion_code.split('-')[-1])
+        except (ValueError, IndexError):
+            badges_earned = 0
 
     with get_conn() as conn:
         c = conn.cursor()
-        c.execute(f"""
+        c.execute("""
+            INSERT INTO detective_completions
+            (class_name, student_id, student_name, reading_lesson_id,
+             completion_code, badges_earned)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (class_name, student_id, student_name, lesson_id,
+              completion_code, badges_earned))
+
+
+def get_class_detective_progress(class_name: str) -> list[dict]:
+    """老师查询班级里每个学生完成了哪些阅读理解课文"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        rows = c.execute("""
             SELECT
-                d.class_name,
-                d.student_id,
-                d.student_name,
-                d.lesson_id,
-                l.title as lesson_title,
-                d.badges_earned,
-                d.self_rating,
-                d.one_line_summary,
-                d.completion_code,
-                d.submitted_at
-            FROM detective_records d
-            JOIN lessons l ON d.lesson_id = l.lesson_id
-            WHERE d.class_name IN ({placeholders}) {where_extra}
-            ORDER BY d.class_name, CAST(d.student_id AS INTEGER)
-        """, params)
-        return [dict(r) for r in c.fetchall()]
+                dc.student_id, dc.student_name,
+                rl.title_cn, rl.grade, rl.unit, rl.lesson_no,
+                dc.badges_earned, dc.submitted_at
+            FROM detective_completions dc
+            JOIN reading_lessons rl ON dc.reading_lesson_id = rl.id
+            WHERE dc.class_name = ?
+            ORDER BY dc.submitted_at DESC
+        """, (class_name,)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def has_student_completed_reading(class_name: str, student_id: str, lesson_id: int) -> bool:
+    """检查学生是否已完成某篇阅读理解(避免重复提交)"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        row = c.execute("""
+            SELECT id FROM detective_completions
+            WHERE class_name = ? AND student_id = ? AND reading_lesson_id = ?
+            LIMIT 1
+        """, (class_name, student_id, lesson_id)).fetchone()
+        return row is not None
