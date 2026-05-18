@@ -13,6 +13,12 @@ from pathlib import Path
 # 初始化数据库（首次启动）
 db.init_db()
 
+# ==================== 核心课文配置 ====================
+# 《恐怖事件》在题库管理后台创建后分配的 lesson_id
+HORROR_INCIDENT_LESSON_ID = 4
+# 改造后的侦探闯关 HTML 部署 URL（GitHub Pages）
+DETECTIVE_HTML_URL = "https://lf9675.github.io/cilang-platform/templates/%E6%81%90%E6%80%96%E4%BA%8B%E4%BB%B6-%E4%BE%A6%E6%8E%A2%E9%97%AF%E5%85%B3v7.html"
+
 st.set_page_config(
     page_title="词语闯关 · 培养好习惯",
     page_icon="📖",
@@ -200,6 +206,10 @@ def render_lesson_selector():
         st.warning("还没有任何课文哦，请告诉老师先添加课文～")
         return
 
+    # ====== 🕵️ 核心课文：侦探闯关入口 ======
+    render_detective_entry(info["class_name"], info["student_id"], info["student_name"])
+    st.markdown("---")
+
     # 三级选择
     grades = sorted(hierarchy.keys())
     grade = st.radio("年级", grades, horizontal=True, key="sel_grade")
@@ -234,6 +244,31 @@ def render_lesson_selector():
                         st.rerun()
                 else:
                     st.button("暂不可用", key=f"na_{lesson_id}", disabled=True, use_container_width=True)
+
+
+def render_detective_entry(class_name: str, student_id: str, student_name: str):
+    """学生选课页：核心课文侦探闯关卡片"""
+    # 查询学生是否已完成
+    try:
+        record = db.get_detective_record(class_name, student_id, HORROR_INCIDENT_LESSON_ID)
+    except Exception:
+        # 第一次部署时表还没建，安全降级
+        record = None
+    
+    with st.container(border=True):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown("### 🕵️ 《恐怖事件》· 侦探闯关")
+            st.caption("核心课文 · 深度阅读 · 5 大能力徽章")
+            if record:
+                st.success(f"✅ 已完成 · 徽章 {record['badges_earned']}/5 · 自评 {record['self_rating']}/5")
+            else:
+                st.info("⏳ 未完成 · 预计 30-40 分钟")
+        with col2:
+            if st.button("进入侦探闯关", key="enter_detective", use_container_width=True, type="primary"):
+                # 跳转到独立页面（pages/4_🕵️_核心课文.py）
+                st.session_state.detective_view = "guide"
+                st.switch_page("pages/4_🕵️_核心课文.py")
 
 
 def find_teacher_for_class(class_name: str) -> int | None:
