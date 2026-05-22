@@ -329,23 +329,15 @@ body {
 
 .term {
   position: relative;
-  background: linear-gradient(180deg, transparent 60%, rgba(244, 216, 95, 0.6) 60%);
+  background: rgba(244, 216, 95, 0.35);
   cursor: help;
-  border-bottom: 1.5px dotted var(--red);
-  padding: 0 2px;
-}
-.term::after {
-  content: 'EN';
-  position: absolute;
-  top: -10px;
-  right: -8px;
-  background: var(--blue-dark);
-  color: white;
-  font-family: var(--font-typewriter);
-  font-size: 9px;
-  padding: 1px 4px;
+  border-bottom: 1.5px dashed var(--red);
+  padding: 0 3px;
   border-radius: 2px;
-  letter-spacing: 0;
+  transition: background 0.15s ease;
+}
+.term:hover {
+  background: rgba(244, 216, 95, 0.7);
 }
 .term-tooltip {
   position: absolute;
@@ -358,14 +350,18 @@ body {
   border-radius: 4px;
   font-family: var(--font-body);
   font-size: 13px;
+  font-weight: 400;
   line-height: 1.5;
   white-space: normal;
-  min-width: 180px;
-  max-width: 280px;
+  min-width: 200px;
+  max-width: 300px;
+  width: max-content;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  z-index: 50;
+  z-index: 100;
   display: none;
   font-style: normal;
+  text-align: left;
+  pointer-events: none;
 }
 .term-tooltip::after {
   content: '';
@@ -376,11 +372,26 @@ body {
   border: 6px solid transparent;
   border-top-color: var(--ink);
 }
+/* 桌面：鼠标悬停时显示 */
+@media (hover: hover) {
+  .term:hover .term-tooltip {
+    display: block;
+    animation: tooltipIn 0.2s ease-out;
+    z-index: 1000;
+  }
+}
+/* 触屏（iPad）：点击后 .show-tooltip 类被添加 → 显示 */
 .term.show-tooltip .term-tooltip {
   display: block;
   animation: tooltipIn 0.2s ease-out;
+  z-index: 1000;
 }
-/* 全部展开模式：tooltip 改为行内标注，避免重叠 */
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-2px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+}
+
+/* 全部展开模式：tooltip 改为行内标注 */
 body.all-terms-expanded .term-tooltip {
   position: static !important;
   transform: none !important;
@@ -398,16 +409,12 @@ body.all-terms-expanded .term-tooltip {
   max-width: none;
   vertical-align: baseline;
   white-space: normal;
+  pointer-events: auto;
 }
 body.all-terms-expanded .term-tooltip::after { display: none; }
-body.all-terms-expanded .term::after { display: none; }
 body.all-terms-expanded .term {
-  background: linear-gradient(180deg, transparent 65%, rgba(244, 216, 95, 0.5) 65%);
+  background: rgba(244, 216, 95, 0.5);
   border-bottom: none;
-}
-@keyframes tooltipIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-2px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(-6px); }
 }
 
 /* ========== Options ========== */
@@ -421,6 +428,7 @@ body.all-terms-expanded .term {
   cursor: pointer; position: relative;
   transition: all 0.2s ease; line-height: 1.6;
   width: 100%; box-shadow: 2px 2px 0 var(--ink-faded);
+  overflow: visible;
 }
 .option::before {
   content: attr(data-letter);
@@ -442,11 +450,13 @@ body.all-terms-expanded .term {
 }
 .option .option-en.show { display: block; }
 
-.option:hover:not(.disabled) {
-  background: var(--paper-light); border-color: var(--ink);
-  transform: translateX(3px); box-shadow: 3px 3px 0 var(--ink);
+@media (hover: hover) {
+  .option:hover:not(.disabled) {
+    background: var(--paper-light); border-color: var(--ink);
+    transform: translateX(3px); box-shadow: 3px 3px 0 var(--ink);
+  }
+  .option:hover:not(.disabled)::before { background: var(--highlight); }
 }
-.option:hover:not(.disabled)::before { background: var(--highlight); }
 .option.selected { background: var(--paper-light); border-color: var(--ink); box-shadow: 2px 2px 0 var(--ink); }
 .option.selected::before { background: var(--blue); color: white; }
 .option.correct {
@@ -548,7 +558,9 @@ body.all-terms-expanded .term {
   border: 2px solid var(--ink-soft); border-radius: 4px;
   background: var(--paper-light);
 }
-.sentence-item:hover:not(.disabled) { border-color: var(--ink); background: var(--paper-light); }
+@media (hover: hover) {
+  .sentence-item:hover:not(.disabled) { border-color: var(--ink); background: var(--paper-light); }
+}
 .sentence-item.selected { border-color: var(--blue); background: rgba(44, 77, 110, 0.08); }
 .sentence-item.selected::before {
   background: var(--blue); border-color: var(--blue);
@@ -1104,7 +1116,7 @@ body.all-terms-expanded .term {
           <strong id="detective-name">见习侦探 · Rookie</strong>
         </div>
       </div>
-      <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()" title="Tap any underlined term to see its English meaning">🌐 术语翻译</button>
+      <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()" title="点击展开所有术语英文标注 · Tap to expand all term translations">🌐 全部展开</button>
       <div class="ep-display">⚡ <span id="ep-value">0</span> EP</div>
       <div class="combo-display" id="combo-display">×<span id="combo-value">2</span> COMBO!</div>
     </div>
@@ -1152,7 +1164,6 @@ const SKILLS = {
 
 const TERMS = __TERMS_DATA__;
 const QUIZ = __QUIZ_DATA__;
-
 /* =================================================================
    STATE
    ================================================================= */
@@ -1224,9 +1235,11 @@ function renderTextWithTerms(text) {
 }
 
 function toggleTerm(event, el) {
-  // 兼容旧调用: toggleTerm(this)
+  // 桌面靠 :hover CSS，无需 JS；只为触屏（无 hover）设备处理点击
   if (event && !el && event.classList) { el = event; event = null; }
   if (event) { event.stopPropagation(); event.preventDefault(); }
+  // 检测：如果设备支持 hover，点击行为不需要（避免双触发）
+  if (window.matchMedia && window.matchMedia('(hover: hover)').matches) return;
   document.querySelectorAll('.term.show-tooltip').forEach(e => { if (e !== el) e.classList.remove('show-tooltip'); });
   el.classList.toggle('show-tooltip');
 }
@@ -1238,34 +1251,29 @@ document.addEventListener('click', e => {
 });
 
 /* =================================================================
-   TTS v5 — 业界经验证方案
-   核心：resumeInfinity (Chrome 14 秒 bug) + 短分段 (Chrome 长文本 bug)
-   参考: https://dev.to/jankapunkt/cross-browser-speech-synthesis
+   TTS v7 — Google Translate 免费 TTS endpoint
+   核心思路：完全绕开 Web Speech API（所有 bug 元凶），改用云端 mp3
+   优点：所有设备发音一致 (Google 中文 TTS, 接近播音员)，长度限制 200 字
+   备援：如果云端失败 → 回退到 Web Speech API
    ================================================================= */
-window.TTS_DEBUG = true; // 调试日志默认开启，可在 Console 看到每段朗读
+window.TTS_DEBUG = false;
 
 const TTS = {
-  queue: [],
-  resumeTimer: null,
+  audio: null,            // 当前 <audio> 元素
+  queue: [],              // 待播放的 mp3 url 队列
   currentBtn: null,
   active: false,
-  isChromeDesktop: /Chrome/.test(navigator.userAgent) && !/Mobi|Android/.test(navigator.userAgent),
+  useFallback: false,     // 云端失败 → 切换到 Web Speech
 
-  // 入口：从按钮点击触发
+  // 入口
   speak: function(rawText, btn) {
-    if (!('speechSynthesis' in window)) {
-      alert('您的浏览器不支持语音朗读\nBrowser does not support speech synthesis.');
-      return;
-    }
-
-    // 已在朗读 → 同一按钮停止；不同按钮停止旧的朗读新的
+    // 已在朗读 → 同一按钮停止；不同按钮停止旧的、开始新的
     if (this.active) {
       const wasSameBtn = (this.currentBtn === btn);
       this.stop();
       if (wasSameBtn) return;
     }
 
-    // 清洗文本
     const text = (rawText || '')
       .replace(/<[^>]+>/g, '')
       .replace(/\*\*/g, '')
@@ -1274,11 +1282,11 @@ const TTS = {
       .trim();
     if (!text) return;
 
-    // 切分：每段最多 60 字（短到 Chrome 不会砍）
-    this.queue = this.chunk(text, 60);
+    // 切分：Google TTS 单段最多 200 字符（保险 160）
+    this.queue = this.chunk(text, 160);
     if (this.queue.length === 0) return;
 
-    if (window.TTS_DEBUG) console.log('[TTS] 总段数:', this.queue.length, this.queue);
+    if (window.TTS_DEBUG) console.log('[TTS] 段数:', this.queue.length, this.queue);
 
     this.active = true;
     this.currentBtn = btn;
@@ -1287,30 +1295,21 @@ const TTS = {
       btn.dataset.spoken = '1';
     }
 
-    // 关键：Chrome 必须 cancel 一次清空旧队列，但要等 cancel 真正完成
-    // 经验：80ms 间隔可靠
-    try { window.speechSynthesis.cancel(); } catch(e){}
-    setTimeout(() => this.playNext(), 100);
+    this.playNext();
   },
 
-  // 切分函数：层次切（句号 → 逗号 → 硬切）
+  // 切分（同 v6）
   chunk: function(text, maxLen) {
-    // 第一层：按强终止符
     const segs = text.split(/([。！？\.\!\?；;]|——|—)/);
     const lvl1 = [];
     let buf = '';
     for (const s of segs) {
       if (!s) continue;
-      if ((buf + s).length > maxLen && buf) {
-        lvl1.push(buf);
-        buf = s;
-      } else {
-        buf += s;
-      }
+      if ((buf + s).length > maxLen && buf) { lvl1.push(buf); buf = s; }
+      else buf += s;
     }
     if (buf.trim()) lvl1.push(buf);
 
-    // 第二层：仍过长按逗号切
     const lvl2 = [];
     for (const seg of lvl1) {
       if (seg.length <= maxLen) { lvl2.push(seg); continue; }
@@ -1324,27 +1323,68 @@ const TTS = {
       if (b2.trim()) lvl2.push(b2);
     }
 
-    // 第三层：还过长就硬切
     const final = [];
     for (const seg of lvl2) {
       if (seg.length <= maxLen) { final.push(seg); continue; }
-      for (let i = 0; i < seg.length; i += maxLen) {
-        final.push(seg.slice(i, i + maxLen));
-      }
+      for (let i = 0; i < seg.length; i += maxLen) final.push(seg.slice(i, i + maxLen));
     }
-
     return final.map(s => s.trim()).filter(Boolean);
   },
 
+  // 播放下一段
   playNext: function() {
     if (!this.active) return;
-    if (this.queue.length === 0) {
-      this.finish();
+    if (this.queue.length === 0) { this.finish(); return; }
+
+    const text = this.queue.shift();
+
+    if (this.useFallback) {
+      // 已切换到 Web Speech 备援
+      this.playWithWebSpeech(text);
       return;
     }
 
-    const text = this.queue.shift();
-    if (window.TTS_DEBUG) console.log('[TTS] ▶ 朗读', text.length, '字:', text);
+    // 主路径：Google Translate TTS
+    const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q=' +
+                encodeURIComponent(text) +
+                '&tl=zh-CN&client=tw-ob&ttsspeed=0.9';
+
+    if (window.TTS_DEBUG) console.log('[TTS] ▶ 云端朗读', text.length, '字:', text);
+
+    const audio = new Audio(url);
+    this.audio = audio;
+
+    let resolved = false;
+    audio.onended = () => {
+      if (resolved) return; resolved = true;
+      if (window.TTS_DEBUG) console.log('[TTS] ✓ ended');
+      if (this.active) setTimeout(() => this.playNext(), 60);
+    };
+    audio.onerror = (e) => {
+      if (resolved) return; resolved = true;
+      if (window.TTS_DEBUG) console.warn('[TTS] ✗ 云端失败，切换到本地朗读');
+      // 第一段就失败 → 切换备援，把当前段塞回队首重新读
+      this.useFallback = true;
+      this.queue.unshift(text);
+      setTimeout(() => this.playNext(), 60);
+    };
+
+    audio.play().catch(err => {
+      if (resolved) return; resolved = true;
+      if (window.TTS_DEBUG) console.warn('[TTS] ✗ play 失败:', err.name, '— 备援');
+      this.useFallback = true;
+      this.queue.unshift(text);
+      setTimeout(() => this.playNext(), 60);
+    });
+  },
+
+  // 备援路径：Web Speech API（旧逻辑）
+  playWithWebSpeech: function(text) {
+    if (!('speechSynthesis' in window)) {
+      this.finish();
+      return;
+    }
+    if (window.TTS_DEBUG) console.log('[TTS] ▶ 本地朗读', text.length, '字');
 
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'zh-CN';
@@ -1352,68 +1392,28 @@ const TTS = {
     u.pitch = 1.0;
     u.volume = 1.0;
 
-    // 关键技巧 1: 仅 Chrome 桌面需要 resumeInfinity 心跳
-    // 必须在 onstart 而非 speak 调用前启动
-    u.onstart = () => {
-      if (window.TTS_DEBUG) console.log('[TTS] ✓ onstart');
-      if (this.isChromeDesktop) this.startResumeInfinity();
-    };
-
     u.onend = () => {
-      if (window.TTS_DEBUG) console.log('[TTS] ✓ onend, 剩余', this.queue.length, '段');
-      this.stopResumeInfinity();
-      if (this.active) {
-        // 段间留 80ms 让 Chrome 引擎清队列
-        setTimeout(() => this.playNext(), 80);
-      }
+      if (this.active) setTimeout(() => this.playNext(), 60);
     };
-
-    u.onerror = (e) => {
-      if (window.TTS_DEBUG) console.warn('[TTS] ✗ onerror:', e.error);
-      this.stopResumeInfinity();
-      // 即使一段失败也继续下一段，不让一段卡死整个朗读
-      if (this.active) {
-        setTimeout(() => this.playNext(), 120);
-      }
+    u.onerror = () => {
+      if (this.active) setTimeout(() => this.playNext(), 100);
     };
 
     try {
-      window.speechSynthesis.speak(u);
+      window.speechSynthesis.cancel();
+      setTimeout(() => window.speechSynthesis.speak(u), 50);
     } catch (e) {
-      if (window.TTS_DEBUG) console.error('[TTS] speak 异常:', e);
-      this.stopResumeInfinity();
-      if (this.active) setTimeout(() => this.playNext(), 120);
-    }
-  },
-
-  // resumeInfinity: Chrome 桌面每 10 秒 pause+resume 一次
-  // 防止 Chrome 14 秒自动 cancel bug
-  startResumeInfinity: function() {
-    this.stopResumeInfinity();
-    const tick = () => {
-      if (!this.active) return;
-      try {
-        if (window.speechSynthesis.speaking) {
-          window.speechSynthesis.pause();
-          window.speechSynthesis.resume();
-        }
-      } catch(e){}
-      this.resumeTimer = setTimeout(tick, 10000);
-    };
-    this.resumeTimer = setTimeout(tick, 10000);
-  },
-
-  stopResumeInfinity: function() {
-    if (this.resumeTimer) {
-      clearTimeout(this.resumeTimer);
-      this.resumeTimer = null;
+      if (this.active) setTimeout(() => this.playNext(), 100);
     }
   },
 
   stop: function() {
     this.active = false;
     this.queue = [];
-    this.stopResumeInfinity();
+    if (this.audio) {
+      try { this.audio.pause(); this.audio.src = ''; } catch(e){}
+      this.audio = null;
+    }
     try { window.speechSynthesis.cancel(); } catch(e){}
     document.querySelectorAll('.tool-btn.speaking').forEach(b => {
       b.classList.remove('speaking');
@@ -1424,7 +1424,10 @@ const TTS = {
 
   finish: function() {
     this.active = false;
-    this.stopResumeInfinity();
+    if (this.audio) {
+      try { this.audio.pause(); } catch(e){}
+      this.audio = null;
+    }
     if (this.currentBtn) {
       this.currentBtn.classList.remove('speaking');
       this.currentBtn.dataset.spoken = '0';
@@ -1433,33 +1436,12 @@ const TTS = {
   }
 };
 
-// 兼容旧接口
+// 兼容接口
 function speakText(text, btn) { TTS.speak(text, btn); }
 function stopAllSpeech() { TTS.stop(); }
-
-// 自测：读两段中等长度文本，验证 TTS 是否正常
-function ttsSelfTest(btn) {
-  const result = document.getElementById('tts-test-result');
-  result.textContent = '⏳ 测试中：本测试会朗读 2 段中等长度中文，约 30 秒...';
-  result.style.color = 'var(--blue)';
-  const testText = '这条逻辑链就是全文的"心脏"——「没交流→有矛盾→开始交流→化解矛盾→关系和谐」。作者用这个故事证明：多点交流，就能解决问题。这条逻辑链直接通向文章中心。所以，找到议论句，就找到了主题。';
-  // 监听 TTS 完成
-  const checkInterval = setInterval(() => {
-    if (!TTS.active) {
-      clearInterval(checkInterval);
-      result.innerHTML = '✅ 测试完成！如果你听到完整朗读，说明朗读功能正常。<br>如果只读到一半或没声音，请反馈给老师 Claude（按 F12 看 Console）。';
-      result.style.color = 'var(--green)';
-    }
-  }, 500);
-  TTS.speak(testText, btn);
-}
-
-// 兼容 state.speaking 旧引用
 Object.defineProperty(state, 'speaking', { get() { return TTS.active; }, set() {} });
 
-// 页面切换前停止
 window.addEventListener('beforeunload', () => { try { TTS.stop(); } catch(e){} });
-// 切换 tab 也停止（防止后台还在读）
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && TTS.active) TTS.stop();
 });
@@ -1472,14 +1454,14 @@ function toggleLanguage() {
   const btn = document.getElementById('lang-toggle');
   if (state.englishMode) {
     btn.classList.add('en-mode');
-    btn.innerHTML = '🌐 全部展开 ✓';
-    btn.title = 'All term tooltips shown — click again to collapse';
+    btn.innerHTML = '🌐 收起 ✓';
+    btn.title = '收起所有术语英文标注';
     document.body.classList.add('all-terms-expanded');
     document.querySelectorAll('.term').forEach(el => el.classList.add('show-tooltip'));
   } else {
     btn.classList.remove('en-mode');
-    btn.innerHTML = '🌐 术语翻译';
-    btn.title = 'Tap any underlined term to see its English meaning';
+    btn.innerHTML = '🌐 全部展开';
+    btn.title = '点击展开所有术语英文标注 · Tap to expand all term translations';
     document.body.classList.remove('all-terms-expanded');
     document.querySelectorAll('.term.show-tooltip').forEach(el => el.classList.remove('show-tooltip'));
   }
@@ -1550,7 +1532,7 @@ function renderIntro() {
     '<div class="intro-page">' +
       '<div class="intro-stamp">CLASSIFIED · v7 · 中二 HCL</div>' +
       '<h1 class="intro-title">__LESSON_TITLE_CN__<br><span style="font-size:22px;color:var(--red);">案件追踪</span></h1>' +
-      '<div class="intro-title-en">__INTRO_TITLE_EN__</div>' +
+      '<div class="intro-title-en">THE HORROR INCIDENT · CASE FILES</div>' +
       '<div class="intro-subtitle">— DETECTIVE\'S READING CASEBOOK · v7 —</div>' +
       '<div style="background: var(--paper-light); border: 2px dashed var(--blue); padding: 14px 18px; margin: 16px auto; max-width: 540px; text-align: left; border-radius: 4px;">' +
         '<div style="font-family: var(--font-typewriter); font-size: 12px; color: var(--red); letter-spacing: 2px; margin-bottom: 8px;">📖 怎么用 · HOW TO USE</div>' +
@@ -1563,8 +1545,8 @@ function renderIntro() {
       '</div>' +
       '<div class="intro-mission">' +
         '<h3>🕵️ 你的任务 <span class="en">YOUR MISSION</span></h3>' +
-        '<p>__MISSION_CN__</p>' +
-        '<p class="en-block">__MISSION_EN__</p>' +
+        '<p>一个宿舍，两个室友，从互相讨厌到成为好朋友——这中间发生了什么？一篇短短的课文，藏着 <strong>5 大阅读能力点</strong>等你破解：人物反应、人物描写、修辞作用、言外之意、作者观点。</p>' +
+        '<p class="en-block">A dorm, two roommates, from hatred to friendship — what happened in between? This short text hides <strong>5 reading skills</strong> for you to unlock: Character Reactions, Character Portrayal, Rhetoric, Hidden Meanings, Author\'s Viewpoint.</p>' +
         '<p style="margin-top:10px;">完成全部 <strong>24 个案件</strong>，收集 5 枚<strong>能力徽章</strong>，通关一节完整的精读课。<strong>预计用时：30-40 分钟。</strong></p>' +
         '<p class="en-block">Complete all <strong>24 cases</strong>, collect <strong>5 skill badges</strong>, and finish a complete close-reading lesson. <strong>~30-40 minutes.</strong></p>' +
       '</div>' +
@@ -2082,8 +2064,22 @@ function renderFinale() {
         '<button class="tool-btn" onclick="speakText(document.getElementById(\'finale-text-zh\').textContent, this)">🔊 朗读结案 · Listen</button>' +
         '<button class="tool-btn" onclick="document.getElementById(\'finale-en\').classList.toggle(\'show\'); this.classList.toggle(\'active\');">🇬🇧 EN 翻译</button>' +
       '</div>' +
-      '<div class="finale-truth" id="finale-text-zh">__FINALE_SUMMARY_CN__</div>' +
-      '<div class="finale-truth-en ' + (state.englishMode ? 'show' : '') + '" id="finale-en">__FINALE_SUMMARY_EN__</div>' +
+      '<div class="finale-truth" id="finale-text-zh">' +
+        '🔍 <strong>结案陈词：</strong><br><br>' +
+        '《__LESSON_TITLE_CN__》的核心信息总结(由老师配置 finale_summary 字段)' +
+        '作者用「我」和蒋妍从冷战到友谊的转变，证明了一个朴素的道理——' +
+        '<strong>"多点交流，就可以解决这些问题，关系也会变得更和谐。"</strong><br><br>' +
+        '这就是这篇课文的中心思想。下次读到类似的记叙文，记得用今天学的 5 个能力点：' +
+        '看人物反应、看人物描写、看修辞作用、看言外之意、看作者观点。' +
+      '</div>' +
+      '<div class="finale-truth-en ' + (state.englishMode ? 'show' : '') + '" id="finale-en">' +
+        '🔍 <strong>FINAL SUMMARY:</strong><br><br>' +
+        '"The Horror Incident" looks like a ghost story but is really about <strong>how communication dissolves the barriers between people</strong>. ' +
+        'Through the transformation of "I" and Jiangyan from cold war to friendship, the author proves a simple truth: ' +
+        '<strong>"With more communication, problems can be solved, and relationships become more harmonious."</strong><br><br>' +
+        'That\'s the central message. Next time you read a similar narrative, remember today\'s 5 skills: ' +
+        'Character Reactions, Character Portrayal, Rhetoric, Hidden Meanings, Author\'s Viewpoint.' +
+      '</div>' +
       '<div class="finale-grid">' +
         '<div class="finale-stat"><span class="finale-stat-num">' + state.ep + '</span><span class="finale-stat-label">总 EP · Total</span></div>' +
         '<div class="finale-stat"><span class="finale-stat-num">' + state.correctCount + '/' + state.totalQuestions + '</span><span class="finale-stat-label">正确率 ' + correctRate + '% · Accuracy</span></div>' +
@@ -2094,6 +2090,145 @@ function renderFinale() {
       '<button class="btn" onclick="location.reload()">📂 重新开始 · Restart</button>' +
     '</div>';
   window.scrollTo({top:0, behavior:'smooth'});
+  injectCompletionCodeUI();
+}
+
+/* =================================================================
+   STREAMLIT INTEGRATION · 完成码生成 (v7 新增)
+   ================================================================= */
+
+// 学生身份（从 URL 参数读取）
+const URL_PARAMS = new URLSearchParams(window.location.search);
+const STUDENT_INFO = {
+  className: URL_PARAMS.get('cls') || '',
+  studentId: URL_PARAMS.get('sid') || '',
+  lessonId: URL_PARAMS.get('lid') || '4'  // 默认《恐怖事件》lesson_id = 4
+};
+
+// ⚠️ SALT 必须与 Python 端 detective_utils.py 完全一致
+const COMPLETION_SALT = 'kewenciyu_v7_2026';
+
+// HMAC-SHA256 + 简化 Base32
+async function generateCompletionCode(className, studentId, lessonId, badgesCount) {
+  const payload = `${className}|${studentId}|${lessonId}|${badgesCount}`;
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(COMPLETION_SALT);
+  const msgData = encoder.encode(payload);
+  
+  const key = await crypto.subtle.importKey(
+    'raw', keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false, ['sign']
+  );
+  
+  const sig = await crypto.subtle.sign('HMAC', key, msgData);
+  const hashArray = Array.from(new Uint8Array(sig));
+  
+  // 与 Python CHARS 完全一致：去掉了易混淆的 I/L/O
+  const chars = '0123456789ABCDEFGHJKMNPQRSTUVWXYZ';
+  let code = '';
+  for (let i = 0; i < 4; i++) {
+    code += chars[hashArray[i] % chars.length];
+  }
+  return `DT-${code}-${badgesCount}`;
+}
+
+async function injectCompletionCodeUI() {
+  const finaleDiv = document.querySelector('.finale');
+  if (!finaleDiv) return;
+  
+  // 避免重复注入
+  if (document.getElementById('completion-code-wrapper')) return;
+  
+  const badges = state.unlockedSkills.size;
+  
+  const wrapper = document.createElement('div');
+  wrapper.id = 'completion-code-wrapper';
+  wrapper.style.cssText = 'margin-top: 28px; padding: 22px; border: 3px dashed var(--ink); background: var(--paper-light); text-align: center;';
+  
+  const hasIdentity = STUDENT_INFO.className && STUDENT_INFO.studentId;
+  
+  wrapper.innerHTML = `
+    <h3 style="font-family: var(--font-display); color: var(--red-dark); margin-bottom: 12px; letter-spacing: 1px;">
+      🎫 你的完成码 · COMPLETION CODE
+    </h3>
+    <p style="font-family: var(--font-typewriter); font-size: 12px; color: var(--ink-soft); margin-bottom: 16px;">
+      回到平台输入此码 + 自评，正式完成本课
+    </p>
+    
+    <div id="identity-form" style="${hasIdentity ? 'display:none' : ''}">
+      <p style="font-size: 13px; margin-bottom: 8px; color: var(--ink-soft);">
+        ⚠️ 没有从平台跳转，请手动输入：
+      </p>
+      <input id="inp-class" type="text" placeholder="班级" 
+             value="${STUDENT_INFO.className}"
+             style="padding: 8px; margin: 4px; border: 2px solid var(--ink); font-family: var(--font-body); width: 130px;">
+      <input id="inp-sid" type="text" placeholder="学号" 
+             value="${STUDENT_INFO.studentId}"
+             style="padding: 8px; margin: 4px; border: 2px solid var(--ink); font-family: var(--font-body); width: 130px;">
+      <input id="inp-lid" type="text" placeholder="课文编号" 
+             value="${STUDENT_INFO.lessonId}"
+             style="padding: 8px; margin: 4px; border: 2px solid var(--ink); font-family: var(--font-body); width: 100px;">
+      <br>
+      <button class="btn" onclick="confirmIdentityAndGenerate()" style="margin-top: 10px;">
+        🔑 生成完成码
+      </button>
+    </div>
+    
+    <div id="code-display" style="${hasIdentity ? '' : 'display:none'}">
+      <div style="font-family: var(--font-display); font-size: 36px; color: var(--blue-dark); letter-spacing: 4px; padding: 16px; background: white; border: 2px solid var(--ink); display: inline-block;" id="completion-code">
+        生成中...
+      </div>
+      <br>
+      <p style="font-family: var(--font-typewriter); font-size: 12px; color: var(--ink-soft); margin-top: 12px;">
+        徽章 ${badges}/5 · 班级 <span id="show-class">${STUDENT_INFO.className}</span> · 学号 <span id="show-sid">${STUDENT_INFO.studentId}</span>
+      </p>
+      <button class="btn" onclick="copyCompletionCode()" style="margin-top: 12px;">
+        📋 复制完成码
+      </button>
+    </div>
+  `;
+  
+  finaleDiv.appendChild(wrapper);
+  
+  if (hasIdentity) {
+    const code = await generateCompletionCode(
+      STUDENT_INFO.className, STUDENT_INFO.studentId, 
+      STUDENT_INFO.lessonId, badges
+    );
+    document.getElementById('completion-code').textContent = code;
+  }
+}
+
+async function confirmIdentityAndGenerate() {
+  const cls = document.getElementById('inp-class').value.trim();
+  const sid = document.getElementById('inp-sid').value.trim();
+  const lid = document.getElementById('inp-lid').value.trim();
+  if (!cls || !sid || !lid) {
+    alert('请填写完整：班级、学号、课文编号都必须填！');
+    return;
+  }
+  STUDENT_INFO.className = cls;
+  STUDENT_INFO.studentId = sid;
+  STUDENT_INFO.lessonId = lid;
+  
+  const badges = state.unlockedSkills.size;
+  const code = await generateCompletionCode(cls, sid, lid, badges);
+  
+  document.getElementById('identity-form').style.display = 'none';
+  document.getElementById('code-display').style.display = '';
+  document.getElementById('show-class').textContent = cls;
+  document.getElementById('show-sid').textContent = sid;
+  document.getElementById('completion-code').textContent = code;
+}
+
+function copyCompletionCode() {
+  const code = document.getElementById('completion-code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    alert(`✅ 已复制：${code}\n\n请回到平台粘贴！`);
+  }).catch(() => {
+    alert(`请手动复制此码：\n\n${code}`);
+  });
 }
 
 /* =================================================================
