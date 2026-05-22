@@ -949,7 +949,12 @@ def get_reading_lesson(lesson_id: int) -> dict | None:
             return None
         try:
             content = json.loads(row['content_json'])
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, TypeError):
+            return None
+        # 防御：阅读理解课文必须是字典 {lesson_meta, story, terms, quiz}。
+        # 若存入的是数组（例如误把"词语闯关题库"存进阅读理解表），
+        # 直接判定为损坏数据返回 None，避免对 list 赋值导致 TypeError 整页崩溃。
+        if not isinstance(content, dict):
             return None
         # 确保 lesson_meta 字段存在
         if 'lesson_meta' not in content:
