@@ -255,11 +255,23 @@ with tab_import:
                     for msg in error_msgs:
                         st.caption(f"• {msg}")
                     st.info("💡 提示:常见错误是字符串里出现了英文双引号 \"...\",请改成中文 「...」")
+                # ===== 格式守卫：阅读理解 JSON 必须是字典，且含 story/quiz =====
+                # 拦住"词语闯关题库"（数组格式）被误导入到阅读理解，
+                # 否则后面 content_dict.get(...) 会对 list 报 AttributeError 整页崩溃。
+                elif not isinstance(content_dict, dict):
+                    st.error("❌ 这不是阅读理解课文 JSON。")
+                    st.info(
+                        "💡 你粘贴的是一个**数组**（以 `[` 开头），这是「词语闯关题库」的格式，"
+                        "应该到「📚 题库管理」导入。\n\n"
+                        "阅读理解课文必须是**字典**（以 `{` 开头），包含 story / terms / quiz 三个部分。"
+                    )
+                elif 'story' not in content_dict and 'quiz' not in content_dict:
+                    st.error("❌ JSON 里没有找到 story 或 quiz 字段，无法作为阅读理解课文导入。")
+                    st.info(
+                        "💡 阅读理解课文 JSON 必须包含 `story`（课文段落）和 `quiz`（闯关题目）。"
+                        "请确认你粘贴的是「侦探闯关」课文，而不是词语闯关题库或其他内容。"
+                    )
                 else:
-                    # 校验结构
-                    if 'story' not in content_dict and 'quiz' not in content_dict:
-                        st.warning("⚠️ JSON 里没有找到 story 或 quiz 字段。继续导入吗?")
-                    
                     # 写入数据库
                     db.update_reading_lesson_content(
                         lesson_id=selected_lesson_id,
