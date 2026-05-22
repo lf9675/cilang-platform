@@ -1,12 +1,7 @@
 """
-pages/4_📖_课文理解.py - 侦探闯关页面(阅读理解)
+pages/4_📖_核心课文.py - 侦探闯关页面(阅读理解)
 功能:学生选课文 → 注入 detective_template.html → 嵌入闯关页面
-
-v7.2 更新（2026-05-19）：
-- 新增 intro_finale 字段支持：mission/finale 文案从 JSON 读
-- 增加 5 处占位符替换：__INTRO_TITLE_EN__、__MISSION_CN__、__MISSION_EN__、
-  __FINALE_SUMMARY_CN__、__FINALE_SUMMARY_EN__
-- 向后兼容：JSON 没有 intro_finale 字段时使用默认值（保持《恐怖事件》原文案）
+作者:仿照 app.py 的词语闯关嵌入方式
 """
 
 import streamlit as st
@@ -50,16 +45,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ============ v7.2 默认 intro_finale 文案（向后兼容 / 旧 JSON 没有此字段时使用） ============
-DEFAULT_INTRO_FINALE = {
-    "title_subtitle_en": "CASE FILES",
-    "mission_cn": "这篇课文藏着 <strong>5 大阅读能力点</strong>等你破解：人物反应、人物描写、修辞作用、言外之意、作者观点。",
-    "mission_en": "This text hides <strong>5 reading skills</strong> for you to unlock: Character Reactions, Character Portrayal, Rhetoric, Hidden Meanings, Author's Viewpoint.",
-    "finale_summary_cn": "🔍 <strong>结案陈词：</strong><br><br>恭喜你完成了 24 个案件！记得用今天学的 5 个能力点：看人物反应、看人物描写、看修辞作用、看言外之意、看作者观点。",
-    "finale_summary_en": "🔍 <strong>FINAL SUMMARY:</strong><br><br>Congratulations on completing all 24 cases! Remember today's 5 skills: Character Reactions, Character Portrayal, Rhetoric, Hidden Meanings, Author's Viewpoint."
-}
-
-
 def init_session():
     if "student_info" not in st.session_state:
         st.session_state.student_info = None
@@ -99,6 +84,8 @@ def render_lesson_selector():
     st.markdown(f"### 👋 {info['student_name']} 同学,选一篇课文开始侦探闯关")
     st.caption(f"班级 {info['class_name']} · 学号 {info['student_id']}")
     
+    # 从数据库读取所有阅读理解课文
+    # 这里假设你有一个 db.list_reading_lessons() 函数(需要新增)
     reading_lessons = db.list_reading_lessons()
     
     if not reading_lessons:
@@ -122,6 +109,7 @@ def render_detective_quiz():
     info = st.session_state.student_info
     lesson_id = st.session_state.selected_reading_lesson
     
+    # 从数据库读取完整的课文 JSON
     lesson_data = db.get_reading_lesson(lesson_id)
     if not lesson_data:
         st.error("课文不存在")
@@ -141,7 +129,7 @@ def render_detective_quiz():
     template_path = Path(__file__).parent.parent / "templates" / "detective_template.html"
     html_content = template_path.read_text(encoding="utf-8")
     
-    # ============ 原有 5 处占位符替换 ============
+    # 5 处占位符替换 - 注入数据
     html_content = html_content.replace(
         '__STORY_DATA__', json.dumps(lesson_data['story'], ensure_ascii=False)
     )
@@ -158,35 +146,9 @@ def render_detective_quiz():
         '__LESSON_SOURCE__', meta['source']
     )
     
-    # ============ v7.2 新增 5 处 intro_finale 占位符替换 ============
-    # 向后兼容：如果 JSON 没有 intro_finale 字段，用默认值
-    intro_finale = lesson_data.get('intro_finale', DEFAULT_INTRO_FINALE)
-    
-    def _js_escape(s):
-        r"""
-        重要：mission/finale 文案会被注入到单引号包围的 JS 字符串里
-        必须把 ' 和 \ 转义，否则单引号嵌套会导致 SyntaxError → 整页空白
-        中文「」无需转义
-        """
-        return s.replace('\\', '\\\\').replace("'", "\\'")
-    
-    html_content = html_content.replace(
-        '__INTRO_TITLE_EN__', _js_escape(intro_finale.get('title_subtitle_en', DEFAULT_INTRO_FINALE['title_subtitle_en']))
-    )
-    html_content = html_content.replace(
-        '__MISSION_CN__', _js_escape(intro_finale.get('mission_cn', DEFAULT_INTRO_FINALE['mission_cn']))
-    )
-    html_content = html_content.replace(
-        '__MISSION_EN__', _js_escape(intro_finale.get('mission_en', DEFAULT_INTRO_FINALE['mission_en']))
-    )
-    html_content = html_content.replace(
-        '__FINALE_SUMMARY_CN__', _js_escape(intro_finale.get('finale_summary_cn', DEFAULT_INTRO_FINALE['finale_summary_cn']))
-    )
-    html_content = html_content.replace(
-        '__FINALE_SUMMARY_EN__', _js_escape(intro_finale.get('finale_summary_en', DEFAULT_INTRO_FINALE['finale_summary_en']))
-    )
-    
-    # 把学生信息注入到一个全局 JS 变量
+    # 通过 URL 参数把学生身份传进去(原 HTML 已经支持读 URL 参数)
+    # 但 components.html 嵌入时,iframe 的 URL 不会带这些参数
+    # 解决:把学生信息注入到一个全局 JS 变量,覆盖原有的 URL 读取逻辑
     student_inject = f"""
     <script>
     window.STREAMLIT_STUDENT_INFO = {{
@@ -201,10 +163,10 @@ def render_detective_quiz():
     # 在 </body> 之前注入
     html_content = html_content.replace('</body>', student_inject + '</body>')
     
-    # 嵌入 HTML
+    # 嵌入 HTML(给足够高度,允许内部滚动)
     components.html(html_content, height=900, scrolling=True)
     
-    # 提交完成码按钮
+    # 提交完成码按钮(参照词语闯关的设计)
     st.markdown("---")
     st.info("📋 完成所有案件后,把完成码复制下来粘贴到下面:")
     
@@ -215,6 +177,7 @@ def render_detective_quiz():
             help="完成所有 24 个案件后,系统会显示完成码"
         )
         if st.form_submit_button("✅ 提交完成码", type="primary"):
+            # 调用现有的 detective_utils.py 校验
             from detective_utils import verify_completion_code
             if verify_completion_code(
                 completion_code,
@@ -222,6 +185,7 @@ def render_detective_quiz():
                 info['student_id'],
                 lesson_id
             ):
+                # 记录到数据库
                 db.record_detective_completion(
                     class_name=info['class_name'],
                     student_id=info['student_id'],
