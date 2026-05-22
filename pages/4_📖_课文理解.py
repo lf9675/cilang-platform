@@ -114,7 +114,21 @@ def render_detective_quiz():
     if not lesson_data:
         st.error("课文不存在")
         return
-    
+
+    # ===== 数据完整性守卫 =====
+    # 防止课文数据损坏（例如误存了词语闯关题库、或缺字段）导致整页 KeyError 崩溃。
+    missing = [k for k in ('story', 'terms', 'quiz', 'lesson_meta') if k not in lesson_data]
+    if missing:
+        if st.button("⬅ 返回选课"):
+            st.session_state.selected_reading_lesson = None
+            st.rerun()
+        st.error(f"❌ 这篇课文的数据不完整，缺少：{', '.join(missing)}")
+        st.info(
+            "💡 这篇课文可能导入了错误格式的 JSON（例如把词语闯关题库存了进来）。"
+            "请老师到「📖 阅读理解管理」删除后，重新导入正确的侦探闯关 JSON。"
+        )
+        return
+
     # 返回按钮
     col1, col2 = st.columns([1, 5])
     with col1:
@@ -123,7 +137,7 @@ def render_detective_quiz():
             st.rerun()
     with col2:
         meta = lesson_data['lesson_meta']
-        st.markdown(f"### {meta['grade']} · {meta['unit']} · {meta['lesson_no']} · 《{meta['title_cn']}》")
+        st.markdown(f"### {meta.get('grade','')} · {meta.get('unit','')} · {meta.get('lesson_no','')} · 《{meta.get('title_cn','')}》")
     
     # 加载模板
     template_path = Path(__file__).parent.parent / "templates" / "detective_template.html"
@@ -143,7 +157,7 @@ def render_detective_quiz():
         '__LESSON_TITLE_CN__', meta['title_cn']
     )
     html_content = html_content.replace(
-        '__LESSON_SOURCE__', meta['source']
+        '__LESSON_SOURCE__', meta.get('source', '')
     )
     
     # 通过 URL 参数把学生身份传进去(原 HTML 已经支持读 URL 参数)
