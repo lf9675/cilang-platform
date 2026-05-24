@@ -1,15 +1,22 @@
 """
 pages/5_📖_阅读理解管理.py - 老师后台阅读理解管理
-功能:老师创建、编辑、删除阅读理解课文(侦探闯关),支持手动 JSON 导入
+功能:老师创建、编辑、删除阅读理解课文,页内提供出题指令,支持手动 JSON 导入
+
+更新(逐段闯关版):
+- 去掉"侦探闯关"字样,改为通用"阅读理解 / 逐段闯关"
+- 文体新增"自动识别"
+- 新增「📋 出题指令」Tab:老师在本页直接复制出题 prompt,去 Claude.ai 出题,
+  拿到 JSON 回到「导入 JSON」即可,整页闭环
 """
 
 import streamlit as st
 import database as db
 import auth
 import json
+import os
 
 st.set_page_config(
-    page_title="阅读理解管理 · 侦探闯关",
+    page_title="阅读理解管理",
     page_icon="📖",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -27,6 +34,33 @@ st.markdown("""
 db.init_db()
 
 
+# ============ 出题指令文件读取 ============
+# 指令正文放在仓库里的 .md 文件,以后改指令只改 md,不动本代码。
+# 兼容多种可能的文件位置(根目录 / prompts/ 子目录)。
+def _load_prompt(filenames):
+    """按候选文件名列表依次尝试读取,返回第一个成功的内容;都失败返回 None"""
+    here = os.path.dirname(os.path.abspath(__file__))
+    search_dirs = [
+        os.path.join(here, ".."),          # 仓库根目录(pages/ 的上一级)
+        os.path.join(here, "..", "prompts"),  # 仓库 prompts/ 子目录
+        here,                               # pages/ 自身
+    ]
+    for d in search_dirs:
+        for name in filenames:
+            path = os.path.normpath(os.path.join(d, name))
+            if os.path.exists(path):
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        return f.read()
+                except Exception:
+                    continue
+    return None
+
+
+READING_PROMPT = _load_prompt(["claude_prompt_reading.md", "claude_prompt_reading_v1.md"])
+CIYU_PROMPT = _load_prompt(["claude_prompt.md"])
+
+
 # ============ 登录检查 ============
 def require_login():
     """老师登录守卫"""
@@ -41,34 +75,74 @@ teacher = require_login()
 
 
 # ============ 页面头部 ============
-st.markdown(f"# 📖 阅读理解管理(侦探闯关)")
-st.caption(f"老师:{teacher['display_name']} · 管理阅读理解课文 + 侦探闯关题库")
+st.markdown("# 📖 阅读理解管理")
+st.caption(f"老师:{teacher['display_name']} · 把一篇课文做成逐段闯关:先把握结构 → 逐段理解 → 主旨拓展")
 st.markdown("---")
 
 
 # ============ 主功能区 ============
-tab_list, tab_create, tab_import = st.tabs([
+tab_guide, tab_list, tab_create, tab_import = st.tabs([
+    "📋 出题指令",
     "📚 现有课文",
     "➕ 创建新课文",
-    "📥 导入侦探闯关 JSON"
+    "📥 导入 JSON"
 ])
+
+
+# ============ Tab 0:出题指令(页内闭环的核心) ============
+with tab_guide:
+    st.markdown("### 用 Claude 出题:三步走")
+    st.caption("本页不调用 AI(零成本)。出题在 Claude.ai 完成,这里只给你指令和导入入口。")
+
+    with st.container(border=True):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.markdown("**① 复制指令**")
+            st.caption("复制下面的「阅读闯关出题指令」全文。")
+        with c2:
+            st.markdown("**② 去 Claude.ai 出题**")
+            st.caption("粘贴指令,在末尾贴上课文 + 你的教学思路,Claude 先给结构大纲,确认后逐段出题。")
+        with c3:
+            st.markdown("**③ 回来导入 JSON**")
+            st.caption("把 Claude 生成的 JSON 复制,到「📥 导入 JSON」粘贴即可。")
+
+    st.markdown("")
+    st.markdown("#### 📖 阅读闯关 · 出题指令")
+    st.caption("适用:把整篇课文做成逐段闯关。自动识别记叙文/说明文/议论文,按文体调整考点。")
+
+    if READING_PROMPT:
+        st.info("👇 点代码框右上角的复制图标即可复制全文,然后粘贴到 Claude.ai。")
+        st.code(READING_PROMPT, language="markdown")
+    else:
+        st.error(
+            "⚠️ 没找到出题指令文件 `claude_prompt_reading.md`。\n\n"
+            "请把该文件放到 GitHub 仓库**根目录**(和 app.py 同级)或 `prompts/` 文件夹下,重新部署即可。"
+        )
+
+    st.markdown("---")
+    with st.expander("🧩 顺便:词语闯关出题指令(如需为本课出词语题)"):
+        st.caption("适用:为课文重点词语出三关(词义/用法/陷阱)。词语题请到「📚 题库管理」导入。")
+        if CIYU_PROMPT:
+            st.code(CIYU_PROMPT, language="markdown")
+        else:
+            st.warning("没找到 `claude_prompt.md`,如需在此显示请把它放进仓库根目录。")
 
 
 # ============ Tab 1:现有课文列表 ============
 with tab_list:
     st.markdown("### 现有阅读理解课文")
-    
+
     lessons = db.list_reading_lessons(only_published=False)
-    
+
     if not lessons:
         st.info("还没有添加任何阅读理解课文。请到「➕ 创建新课文」或「📥 导入 JSON」添加。")
     else:
         st.caption(f"共 {len(lessons)} 篇课文")
-        
+
         for lesson in lessons:
             with st.container(border=True):
                 col1, col2, col3 = st.columns([5, 2, 2])
-                
+
                 with col1:
                     publish_status = "✅ 已发布" if lesson['is_published'] else "📝 草稿"
                     st.markdown(f"**《{lesson['title_cn']}》** · {publish_status}")
@@ -79,7 +153,7 @@ with tab_list:
                         f"文体:{lesson['lesson_type'] or '记叙文'}  |  "
                         f"📝 {lesson['total_questions']} 题"
                     )
-                
+
                 with col2:
                     if lesson['is_published']:
                         if st.button("📝 设为草稿", key=f"unpub_{lesson['id']}", use_container_width=True):
@@ -89,7 +163,7 @@ with tab_list:
                         if st.button("✅ 发布", key=f"pub_{lesson['id']}", type="primary", use_container_width=True):
                             db.toggle_reading_lesson_publish(lesson['id'], True)
                             st.rerun()
-                
+
                 with col3:
                     if st.button("🗑️ 删除", key=f"del_{lesson['id']}", use_container_width=True):
                         if st.session_state.get(f"confirm_del_{lesson['id']}"):
@@ -100,7 +174,7 @@ with tab_list:
                         else:
                             st.session_state[f"confirm_del_{lesson['id']}"] = True
                             st.warning("再点一次「删除」确认")
-                
+
                 # 展开查看完整内容
                 with st.expander("📄 查看课文 JSON"):
                     full = db.get_reading_lesson(lesson['id'])
@@ -112,44 +186,48 @@ with tab_list:
 with tab_create:
     st.markdown("### 创建新阅读理解课文")
     st.caption("先填写基本信息和完整内容 JSON,即可创建一篇新课文")
-    
+
     with st.form("create_reading_lesson"):
         col1, col2 = st.columns(2)
         with col1:
-            title_cn = st.text_input("课文中文标题 *", placeholder="例如:恐怖事件")
+            title_cn = st.text_input("课文中文标题 *", placeholder="例如:最美的姿势")
             grade = st.text_input("年级", placeholder="例如:Sec 2")
             unit = st.text_input("单元", placeholder="例如:单元四")
         with col2:
-            title_en = st.text_input("英文标题", placeholder="例如:The Horror Incident")
+            title_en = st.text_input("英文标题", placeholder="例如:The Most Beautiful Pose")
             lesson_no = st.text_input("第几课", placeholder="例如:第三课")
             lesson_type = st.selectbox(
                 "文体",
-                options=["记叙文", "说明文", "议论文", "散文"],
-                index=0
+                options=["自动识别", "记叙文", "说明文", "议论文", "散文"],
+                index=0,
+                help="选「自动识别」则由出题指令在 Claude.ai 端判断文体;也可手动指定。"
             )
-        
+
         source = st.text_input(
             "课文出处",
-            placeholder="例如:原文｜《友谊前的恐怖事件》(改编) · Adapted"
+            placeholder="例如:原文｜《最美的姿势》(改编) · Adapted"
         )
-        
+
         st.markdown("---")
         st.markdown("**完整课文 JSON**(含 story / terms / quiz 三个部分)")
-        st.caption("提示:可以先空着保存草稿,后续在「📥 导入 JSON」补充内容")
-        
+        st.caption("提示:可以先空着保存草稿,后续在「📥 导入 JSON」补充内容。JSON 怎么来?见「📋 出题指令」。")
+
         content_json_text = st.text_area(
             "JSON 内容",
             height=300,
             placeholder='{\n  "story": {"title": "...", "paragraphs": [...]},\n  "terms": {...},\n  "quiz": [...]\n}',
-            help="格式参考:detective_template.html 配套的 kongbushijian_complete.json"
+            help="格式见「📋 出题指令」里的说明,或参考 zuimei_zishi_complete.json"
         )
-        
+
         submitted = st.form_submit_button("✅ 创建课文", type="primary", use_container_width=True)
-        
+
         if submitted:
             if not title_cn:
                 st.error("课文中文标题不能为空")
             else:
+                # 「自动识别」存空字符串,表示由出题端判定;其余存所选文体
+                stored_type = "" if lesson_type == "自动识别" else lesson_type
+
                 # 校验 JSON
                 content_dict = None
                 if content_json_text.strip():
@@ -159,11 +237,11 @@ with tab_create:
                         st.error(f"❌ JSON 格式错误: {e}")
                         st.caption("提示:可以先空着创建,后续在「导入 JSON」补充")
                         st.stop()
-                
+
                 # 没有 JSON 就给个空壳
                 if content_dict is None:
                     content_dict = {"story": {"title": title_cn, "paragraphs": []}, "terms": {}, "quiz": []}
-                
+
                 # 创建课文
                 lesson_id = db.create_reading_lesson(
                     title_cn=title_cn,
@@ -172,11 +250,11 @@ with tab_create:
                     grade=grade or "",
                     unit=unit or "",
                     lesson_no=lesson_no or "",
-                    lesson_type=lesson_type,
+                    lesson_type=stored_type,
                     content_json=json.dumps(content_dict, ensure_ascii=False),
                     teacher_id=teacher['teacher_id']
                 )
-                
+
                 if lesson_id:
                     st.success(f"✅ 创建成功!课文 ID = {lesson_id}")
                     st.balloons()
@@ -187,11 +265,11 @@ with tab_create:
 
 # ============ Tab 3:导入完整 JSON ============
 with tab_import:
-    st.markdown("### 导入侦探闯关完整 JSON")
-    st.caption("把 Claude 给你的完整阅读理解课文 JSON 一次性粘贴进来,系统自动识别")
-    
+    st.markdown("### 导入课文完整 JSON")
+    st.caption("把 Claude 给你的完整阅读理解课文 JSON 一次性粘贴进来,系统自动识别。指令见「📋 出题指令」。")
+
     st.markdown("---")
-    
+
     # 选课文
     lessons = db.list_reading_lessons(only_published=False)
     if not lessons:
@@ -206,28 +284,28 @@ with tab_import:
             options=list(lesson_options.keys())
         )
         selected_lesson_id = lesson_options[selected_label]
-        
+
         json_text = st.text_area(
             "粘贴完整 JSON 内容",
             height=400,
             placeholder='{\n  "lesson_meta": {...},\n  "story": {"title": "...", "paragraphs": [...]},\n  "terms": {...},\n  "quiz": [...]\n}',
             help="必须是合法 JSON,以 { 开头 } 结尾"
         )
-        
+
         if st.button("📥 导入到上面选中的课文", type="primary", use_container_width=True):
             if not json_text.strip():
                 st.error("请先粘贴 JSON 内容")
             else:
-                # 4 层 JSON 容错解析(参考 cilang-platform 主程序的做法)
+                # 4 层 JSON 容错解析
                 content_dict = None
                 error_msgs = []
-                
+
                 # 第 1 层:直接解析
                 try:
                     content_dict = json.loads(json_text)
                 except json.JSONDecodeError as e:
                     error_msgs.append(f"直接解析失败:{e}")
-                
+
                 # 第 2 层:去 markdown 代码块包裹
                 if content_dict is None:
                     cleaned = json_text.strip()
@@ -239,7 +317,7 @@ with tab_import:
                         content_dict = json.loads(cleaned.strip())
                     except json.JSONDecodeError as e:
                         error_msgs.append(f"清理 markdown 后解析失败:{e}")
-                
+
                 # 第 3 层:正则提取最外层 {} 或 []
                 if content_dict is None:
                     import re
@@ -249,27 +327,25 @@ with tab_import:
                             content_dict = json.loads(match.group(1))
                         except json.JSONDecodeError as e:
                             error_msgs.append(f"正则提取后解析失败:{e}")
-                
+
                 if content_dict is None:
                     st.error("❌ JSON 格式错误,请检查:")
                     for msg in error_msgs:
                         st.caption(f"• {msg}")
                     st.info("💡 提示:常见错误是字符串里出现了英文双引号 \"...\",请改成中文 「...」")
-                # ===== 格式守卫：阅读理解 JSON 必须是字典，且含 story/quiz =====
-                # 拦住"词语闯关题库"（数组格式）被误导入到阅读理解，
-                # 否则后面 content_dict.get(...) 会对 list 报 AttributeError 整页崩溃。
+                # ===== 格式守卫:阅读理解 JSON 必须是字典,且含 story/quiz =====
                 elif not isinstance(content_dict, dict):
                     st.error("❌ 这不是阅读理解课文 JSON。")
                     st.info(
-                        "💡 你粘贴的是一个**数组**（以 `[` 开头），这是「词语闯关题库」的格式，"
+                        "💡 你粘贴的是一个**数组**(以 `[` 开头),这是「词语闯关题库」的格式,"
                         "应该到「📚 题库管理」导入。\n\n"
-                        "阅读理解课文必须是**字典**（以 `{` 开头），包含 story / terms / quiz 三个部分。"
+                        "阅读理解课文必须是**字典**(以 `{` 开头),包含 story / terms / quiz 三个部分。"
                     )
                 elif 'story' not in content_dict and 'quiz' not in content_dict:
-                    st.error("❌ JSON 里没有找到 story 或 quiz 字段，无法作为阅读理解课文导入。")
+                    st.error("❌ JSON 里没有找到 story 或 quiz 字段,无法作为阅读理解课文导入。")
                     st.info(
-                        "💡 阅读理解课文 JSON 必须包含 `story`（课文段落）和 `quiz`（闯关题目）。"
-                        "请确认你粘贴的是「侦探闯关」课文，而不是词语闯关题库或其他内容。"
+                        "💡 阅读理解课文 JSON 必须包含 `story`(课文段落)和 `quiz`(闯关题目)。"
+                        "请确认你粘贴的是阅读理解课文,而不是词语闯关题库或其他内容。"
                     )
                 else:
                     # 写入数据库
@@ -277,21 +353,21 @@ with tab_import:
                         lesson_id=selected_lesson_id,
                         content_json=json.dumps(content_dict, ensure_ascii=False)
                     )
-                    
+
                     # 统计
                     story_paragraphs = len(content_dict.get('story', {}).get('paragraphs', []))
                     terms_count = len(content_dict.get('terms', {}))
                     quiz = content_dict.get('quiz', [])
                     total_q = sum(len(p.get('questions', [])) for p in quiz)
-                    
-                    st.success(f"✅ 导入成功!")
+
+                    st.success("✅ 导入成功!")
                     st.caption(
                         f"课文段落:{story_paragraphs} 段 | "
                         f"术语词典:{terms_count} 个 | "
-                        f"题目:{total_q} 道(分 {len(quiz)} 阶段)"
+                        f"题目:{total_q} 道(分 {len(quiz)} 关)"
                     )
                     st.balloons()
-                    
+
                     if not selected_label.endswith("(已发布)"):
                         st.info("💡 提示:课文还是草稿状态,记得在「📚 现有课文」标签把它发布给学生")
 
@@ -300,36 +376,27 @@ with tab_import:
 st.markdown("---")
 with st.expander("📘 怎么用?"):
     st.markdown("""
-**典型工作流(以《恐怖事件》为例):**
+**典型工作流(以《最美的姿势》为例):**
 
-1. **创建课文** - 在「➕ 创建新课文」填基本信息(标题、年级、单元),JSON 内容可以暂时空着
-2. **导入题目** - 切到「📥 导入侦探闯关 JSON」,选刚创建的课文,粘贴完整 JSON
-3. **发布课文** - 回到「📚 现有课文」,点「✅ 发布」让学生可见
-4. **学生闯关** - 学生在「📖 核心课文」选课文,进入侦探闯关
+1. **拿指令** - 在「📋 出题指令」复制阅读闯关出题指令
+2. **去 Claude.ai 出题** - 粘贴指令,末尾贴上课文 + 你的教学思路;Claude 先给结构大纲,你确认后它逐段出题,最后给完整 JSON
+3. **创建课文** - 在「➕ 创建新课文」填基本信息,JSON 可暂时空着
+4. **导入题目** - 切到「📥 导入 JSON」,选刚创建的课文,粘贴完整 JSON
+5. **发布课文** - 回到「📚 现有课文」,点「✅ 发布」让学生可见
 
-**JSON 格式参考**:
+**JSON 顶层结构**:
 
 ```json
 {
-  "lesson_meta": {
-    "title_cn": "课文标题",
-    "title_en": "English Title",
-    "source": "原文出处"
-  },
-  "story": {
-    "title": "课文标题",
-    "paragraphs": ["第1段...", "第2段..."]
-  },
-  "terms": {
-    "诡异": {"en": "Strange, eerie"},
-    "委婉": {"en": "Tactful, indirect"}
-  },
+  "lesson_meta": { "title_cn": "课文标题", "title_en": "English Title", "source": "出处" },
+  "story": { "title": "课文标题", "paragraphs": ["第1段...", "第2段..."] },
+  "terms": { "诡异": {"en": "Strange, eerie"} },
   "quiz": [
     {
       "phase": "phase-1",
-      "phaseName": "第一案:鸟瞰全局",
+      "phaseName": "第一关:把握全文脉络",
       "questions": [
-        {"id": "Q1", "type": "choice", "prompt": "...", "options": [...], "correct": 1}
+        {"id": "Q1", "type": "choice", "prompt": "...", "options": [], "correct": 1}
       ]
     }
   ]
@@ -337,7 +404,6 @@ with st.expander("📘 怎么用?"):
 ```
 
 **常见错误**:
-- ❌ JSON 字符串里用英文双引号 `"..."` → 改用中文 `「...」`
-- ❌ 中文逗号 `,` 误当英文 → JSON 结构必须用英文 `,`
+- ❌ JSON 字符串里用错引号导致结构破坏
 - ❌ 末尾多了逗号 → JSON 不允许末尾逗号
 """)
