@@ -934,83 +934,7 @@ body.all-terms-expanded .term {
   50% { box-shadow: 2px 2px 0 var(--ink), 0 0 20px rgba(184, 137, 60, 0.7); }
 }
 
-/* ========== Intro / Finale ========== */
-.intro-page { text-align: center; padding: 30px 20px; }
-.intro-stamp {
-  display: inline-block; padding: 8px 18px;
-  border: 3px solid var(--red); color: var(--red);
-  font-family: var(--font-typewriter); font-size: 13px;
-  letter-spacing: 3px; transform: rotate(-3deg);
-  margin-bottom: 20px; background: var(--paper-light);
-}
-.intro-title {
-  font-family: var(--font-display); font-size: 44px;
-  color: var(--ink); line-height: 1.1;
-  margin-bottom: 4px; letter-spacing: 2px;
-}
-.intro-title-en {
-  font-family: var(--font-typewriter); font-size: 18px;
-  color: var(--red); margin-bottom: 6px; letter-spacing: 3px;
-}
-.intro-subtitle {
-  font-family: var(--font-typewriter); font-size: 13px;
-  color: var(--ink-soft); margin-bottom: 24px; letter-spacing: 2px;
-}
-.intro-mission {
-  background: white; border: 2px solid var(--ink);
-  border-radius: 4px; padding: 22px 22px;
-  margin: 20px auto; max-width: 540px; text-align: left;
-  box-shadow: var(--shadow-card);
-}
-.intro-mission h3 {
-  font-family: var(--font-display); font-size: 22px;
-  color: var(--red); letter-spacing: 1px; margin-bottom: 8px;
-}
-.intro-mission h3 .en {
-  font-family: var(--font-typewriter); font-size: 13px;
-  color: var(--blue-dark); letter-spacing: 2px;
-  display: block; margin-top: 2px;
-}
-.intro-mission p {
-  font-family: var(--font-serif); font-size: 15px;
-  line-height: 1.9; color: var(--ink);
-}
-.intro-mission .en-block {
-  font-family: var(--font-serif); font-size: 13px;
-  color: var(--blue-dark); line-height: 1.6;
-  margin-top: 6px; padding-left: 12px;
-  border-left: 2px solid var(--blue);
-  font-style: italic;
-}
-.intro-rules {
-  background: var(--blue-dark); color: var(--paper);
-  border-radius: 4px; padding: 20px 22px;
-  margin: 20px auto; max-width: 540px; text-align: left;
-}
-.intro-rules h3 {
-  font-family: var(--font-display); font-size: 20px;
-  color: var(--highlight); margin-bottom: 10px; letter-spacing: 1px;
-}
-.intro-rules h3 .en {
-  font-family: var(--font-typewriter); font-size: 12px;
-  color: rgba(244, 216, 95, 0.7); letter-spacing: 2px;
-  display: block; margin-top: 2px;
-}
-.intro-rules ul { list-style: none; padding: 0; }
-.intro-rules li {
-  font-family: var(--font-serif); font-size: 14px;
-  margin-bottom: 8px; padding-left: 26px;
-  position: relative; line-height: 1.7;
-}
-.intro-rules li::before {
-  content: '▸'; position: absolute; left: 4px; top: 0;
-  color: var(--highlight); font-size: 16px;
-}
-.intro-rules li .en {
-  display: block;
-  font-family: var(--font-typewriter); font-size: 12px;
-  color: rgba(244, 216, 95, 0.85); margin-top: 2px;
-}
+/* ========== Finale ========== */
 
 .finale {
   background: var(--paper-light); border: 4px double var(--ink);
@@ -1097,7 +1021,6 @@ body.all-terms-expanded .term {
   .story-paragraph { font-size: 15px; line-height: 1.9; }
   .match-row { grid-template-columns: 1fr; }
   .match-arrow { transform: rotate(90deg); }
-  .intro-title { font-size: 34px; }
   .finale-stamp { font-size: 28px; padding: 14px 22px; }
   .celeb-card { padding: 32px 22px; }
   .finale-grid, .celeb-stats { grid-template-columns: 1fr; }
@@ -1508,7 +1431,7 @@ function updateHUD() {
    ROUTING
    ================================================================= */
 function render() {
-  if (!state.started) { renderIntro(); updateHUD(); return; }
+  if (!state.started) { startMission(); return; }
   const phase = QUIZ[state.currentPhaseIdx];
   if (!phase) { renderFinale(); updateHUD(); return; }
   if (state.currentScreen === 'brief') renderBrief(phase);
@@ -1524,44 +1447,19 @@ function render() {
 }
 
 /* =================================================================
-   INTRO
+   HOW-TO-USE BAR  (轻量提示条，只在第一阶段简报上方显示一次)
+   v8：删掉了原 renderIntro 开场页（案件追踪大标题 / 你的任务 / 闯关机制），
+   保留"怎么用"——教学生虚线词可 hover/点击，并提供一个真实可用的朗读测试。
    ================================================================= */
-function renderIntro() {
-  const content = document.getElementById('content');
-  content.innerHTML =
-    '<div class="intro-page">' +
-      '<div class="intro-stamp">CLASSIFIED · v7 · 中二 HCL</div>' +
-      '<h1 class="intro-title">__LESSON_TITLE_CN__<br><span style="font-size:22px;color:var(--red);">案件追踪</span></h1>' +
-      '<div class="intro-title-en">THE HORROR INCIDENT · CASE FILES</div>' +
-      '<div class="intro-subtitle">— DETECTIVE\'S READING CASEBOOK · v7 —</div>' +
-      '<div style="background: var(--paper-light); border: 2px dashed var(--blue); padding: 14px 18px; margin: 16px auto; max-width: 540px; text-align: left; border-radius: 4px;">' +
-        '<div style="font-family: var(--font-typewriter); font-size: 12px; color: var(--red); letter-spacing: 2px; margin-bottom: 8px;">📖 怎么用 · HOW TO USE</div>' +
-        '<p style="font-family: var(--font-serif); font-size: 14px; margin-bottom: 8px; line-height: 1.7;">' +
-          '👉 看到<span class="term">虚线下划线的词<span class="term-tooltip">Hover with mouse OR tap on iPad — English explanation appears.</span></span>了吗？' +
-          '<br><strong>电脑：</strong>鼠标放上去就出现英文｜<strong>iPad/手机：</strong>用手点一下出现' +
-        '</p>' +
-        '<button class="tool-btn" id="tts-test-btn" onclick="ttsSelfTest(this)" style="font-size: 13px; padding: 6px 14px; margin-top: 4px;">🔊 测试朗读（30 秒）</button>' +
-        '<div id="tts-test-result" style="margin-top: 8px; font-family: var(--font-typewriter); font-size: 11px; color: var(--ink-soft); min-height: 16px;"></div>' +
-      '</div>' +
-      '<div class="intro-mission">' +
-        '<h3>🕵️ 你的任务 <span class="en">YOUR MISSION</span></h3>' +
-        '<p>一个宿舍，两个室友，从互相讨厌到成为好朋友——这中间发生了什么？一篇短短的课文，藏着 <strong>5 大阅读能力点</strong>等你破解：人物反应、人物描写、修辞作用、言外之意、作者观点。</p>' +
-        '<p class="en-block">A dorm, two roommates, from hatred to friendship — what happened in between? This short text hides <strong>5 reading skills</strong> for you to unlock: Character Reactions, Character Portrayal, Rhetoric, Hidden Meanings, Author\'s Viewpoint.</p>' +
-        '<p style="margin-top:10px;">完成全部 <strong>24 个案件</strong>，收集 5 枚<strong>能力徽章</strong>，通关一节完整的精读课。<strong>预计用时：30-40 分钟。</strong></p>' +
-        '<p class="en-block">Complete all <strong>24 cases</strong>, collect <strong>5 skill badges</strong>, and finish a complete close-reading lesson. <strong>~30-40 minutes.</strong></p>' +
-      '</div>' +
-      '<div class="intro-rules">' +
-        '<h3>📋 闯关机制 <span class="en">HOW TO PLAY</span></h3>' +
-        '<ul>' +
-          '<li>每答对一题获得 <strong>10-20 EP</strong>，难题分更高<span class="en">Earn 10-20 EP per correct answer; harder = more</span></li>' +
-          '<li><strong>连击（Combo）</strong>：连续答对 EP 翻倍，答错清零<span class="en">Chain right answers → bonus EP; wrong answer resets</span></li>' +
-          '<li>用过<strong>提示</strong>会扣一半分数，但比答错强<span class="en">Using hints halves your EP, but still better than wrong</span></li>' +
-          '<li>每个能力点完成后，解锁一枚<strong>侦探徽章</strong> 🏅<span class="en">Finish each skill = unlock a detective badge</span></li>' +
-          '<li>💡 难词旁有 EN 提示；右上角 🌐 可切换全英文<span class="en">Click underlined terms for English; top-right 🌐 switches the whole UI</span></li>' +
-        '</ul>' +
-      '</div>' +
-      '<button class="btn" onclick="startMission()">📂 开启案件 · Begin Case</button>' +
-    '</div>';
+function howToUseBar() {
+  return '<div style="background: var(--paper-light); border: 2px dashed var(--blue); padding: 14px 18px; margin: 0 auto 18px; max-width: 540px; text-align: left; border-radius: 4px;">' +
+    '<div style="font-family: var(--font-typewriter); font-size: 12px; color: var(--red); letter-spacing: 2px; margin-bottom: 8px;">📖 怎么用 · HOW TO USE</div>' +
+    '<p style="font-family: var(--font-serif); font-size: 14px; margin-bottom: 8px; line-height: 1.7;">' +
+      '👉 看到<span class="term">虚线下划线的词<span class="term-tooltip">Hover with mouse OR tap on iPad — English explanation appears.</span></span>了吗？' +
+      '<br><strong>电脑：</strong>鼠标放上去就出现英文｜<strong>iPad/手机：</strong>用手点一下出现' +
+    '</p>' +
+    '<button class="tool-btn" onclick="speakText(\'你好，这是朗读测试。\', this)" style="font-size: 13px; padding: 6px 14px; margin-top: 4px;">🔊 测试朗读 · Test audio</button>' +
+  '</div>';
 }
 
 function startMission() {
@@ -1581,6 +1479,7 @@ function renderBrief(phase) {
   const content = document.getElementById('content');
   const isFirst = phase.readBefore;
   content.innerHTML =
+    (isFirst ? howToUseBar() : '') +
     '<div class="case-header">' +
       '<div class="case-label">' + phase.phaseSubtitle + '</div>' +
       '<h2 class="case-title">' + phase.phaseName + '</h2>' +
