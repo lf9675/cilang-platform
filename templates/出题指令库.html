@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华文通 · 出题指令库</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E9E0CE; --paper-light:#F3ECDD; --card:#FBF7EE;
+  --ink:#211C16; --ink-soft:#4A4138; --ink-faded:#857969;
+  --red:#A93226; --red-dark:#7A1F18; --gold:#B0883C;
+  --green:#4A6B47; --line:#D8CCB4;
+  --serif:'Noto Serif SC',serif; --sans:'Noto Sans SC',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--sans); color:var(--ink); line-height:1.7;
+  background:var(--paper);
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(176,136,60,.07), transparent 42%),
+    radial-gradient(circle at 85% 78%, rgba(169,50,38,.06), transparent 45%);
+  min-height:100vh; padding:0 0 80px;
+}
+.wrap{max-width:880px; margin:0 auto; padding:0 22px}
+
+/* ── header ── */
+header{text-align:center; padding:60px 22px 38px}
+.kicker{
+  font-family:var(--sans); font-size:13px; letter-spacing:.32em;
+  color:var(--gold); font-weight:700; text-transform:uppercase; margin-bottom:14px;
+}
+h1{
+  font-family:var(--serif); font-weight:900; color:var(--ink);
+  font-size:clamp(30px,7vw,48px); line-height:1.18; letter-spacing:.02em;
+}
+h1 .dot{color:var(--red)}
+.subtitle{
+  margin-top:16px; font-size:16px; color:var(--ink-soft); max-width:560px;
+  margin-left:auto; margin-right:auto;
+}
+.rule{
+  width:54px; height:3px; background:var(--red); margin:26px auto 0; border-radius:2px;
+}
+
+/* ── how-to band ── */
+.howto{
+  background:var(--paper-light); border:1px solid var(--line);
+  border-radius:14px; padding:24px 26px; margin:34px 0 44px;
+}
+.howto h2{
+  font-family:var(--serif); font-size:18px; font-weight:700; margin-bottom:16px;
+  display:flex; align-items:center; gap:9px;
+}
+.steps{display:grid; gap:14px}
+@media(min-width:620px){.steps{grid-template-columns:repeat(3,1fr)}}
+.step{display:flex; gap:12px; align-items:flex-start}
+.step .n{
+  flex:none; width:30px; height:30px; border-radius:50%;
+  background:var(--ink); color:var(--paper-light); font-family:var(--serif);
+  font-weight:700; font-size:15px; display:grid; place-items:center; margin-top:2px;
+}
+.step p{font-size:14.5px; color:var(--ink-soft)}
+.step b{color:var(--ink)}
+
+/* ── cards ── */
+.card{
+  background:var(--card); border:1px solid var(--line);
+  border-radius:16px; margin-bottom:30px; overflow:hidden;
+  box-shadow:0 1px 0 #fff inset, 0 10px 30px -18px rgba(33,28,22,.4);
+}
+.card-head{padding:28px 30px 22px; border-bottom:1px dashed var(--line); position:relative}
+.tag{
+  display:inline-block; font-size:12px; font-weight:700; letter-spacing:.16em;
+  text-transform:uppercase; padding:5px 11px; border-radius:6px; margin-bottom:14px;
+}
+.tag.ciyu{background:rgba(176,136,60,.16); color:var(--gold)}
+.tag.read{background:rgba(74,107,71,.16); color:var(--green)}
+.card h3{font-family:var(--serif); font-size:24px; font-weight:900; margin-bottom:8px}
+.card .desc{font-size:15px; color:var(--ink-soft); max-width:600px}
+.meta{
+  margin-top:16px; display:flex; flex-wrap:wrap; gap:8px;
+}
+.chip{
+  font-size:12.5px; background:var(--paper); border:1px solid var(--line);
+  color:var(--ink-faded); padding:4px 10px; border-radius:20px;
+}
+.card-body{padding:22px 30px 28px}
+.tip{
+  font-size:14px; color:var(--ink-soft); background:var(--paper);
+  border-left:3px solid var(--gold); padding:12px 16px; border-radius:0 8px 8px 0;
+  margin-bottom:20px;
+}
+.tip b{color:var(--red-dark)}
+
+.btn-row{display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+.copy-btn{
+  font-family:var(--sans); font-weight:700; font-size:16px; cursor:pointer;
+  border:none; border-radius:10px; padding:15px 28px; color:#fff;
+  background:var(--red); transition:transform .12s ease, background .2s ease;
+  display:inline-flex; align-items:center; gap:9px;
+  box-shadow:0 6px 16px -8px rgba(169,50,38,.7);
+}
+.copy-btn:hover{background:var(--red-dark)}
+.copy-btn:active{transform:translateY(1px)}
+.copy-btn.ok{background:var(--green); box-shadow:none}
+.preview-btn{
+  font-family:var(--sans); font-weight:500; font-size:14.5px; cursor:pointer;
+  background:transparent; border:1px solid var(--line); color:var(--ink-soft);
+  border-radius:10px; padding:14px 20px; transition:border-color .2s, color .2s;
+}
+.preview-btn:hover{border-color:var(--ink-faded); color:var(--ink)}
+
+.preview{
+  display:none; margin-top:20px; background:#1f1a14; color:#e7ddc9;
+  border-radius:10px; padding:18px 20px; max-height:360px; overflow:auto;
+  font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px;
+  line-height:1.6; white-space:pre-wrap; word-break:break-word;
+}
+.preview.show{display:block}
+
+footer{
+  text-align:center; margin-top:50px; color:var(--ink-faded); font-size:13px;
+}
+footer .line{width:40px;height:2px;background:var(--line);margin:0 auto 18px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="kicker">CLever 华文通 · 教研工具</div>
+  <h1>出题指令库<span class="dot">.</span></h1>
+  <p class="subtitle">把指令复制到 Claude.ai，在末尾贴上课文，即可生成可直接导入系统的题库。</p>
+  <div class="rule"></div>
+</header>
+
+<div class="wrap">
+
+  <div class="howto">
+    <h2>📋 三步出题</h2>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><p><b>复制</b>下面任一指令的全文。</p></div>
+      <div class="step"><div class="n">2</div><p>打开 <b>Claude.ai</b>，粘贴指令，<b>在最末尾贴上你的课文和词语</b>。</p></div>
+      <div class="step"><div class="n">3</div><p>Claude 生成 <b>JSON 题库</b>，复制后导入平台即可。</p></div>
+    </div>
+  </div>
+
+  <!-- 词语闯关 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="tag ciyu">词语闯关</span>
+      <h3>词语闯关 · 出题指令</h3>
+      <p class="desc">为一篇课文的重点词语出三关：词义关、用法关、陷阱关。干扰项全部来自新加坡学生五大典型偏误库。</p>
+      <div class="meta">
+        <span class="chip">三关：词义 · 用法 · 陷阱</span>
+        <span class="chip">五大偏误库</span>
+        <span class="chip">输出 JSON</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <p class="tip">末尾要填：<b>课文标题 · 课文全文 · 要出题的词语清单（标好 hard/easy）</b></p>
+      <div class="btn-row">
+        <button class="copy-btn" data-target="ciyu">
+          <span class="ico">⧉</span><span class="label">复制词语闯关指令</span>
+        </button>
+        <button class="preview-btn" data-toggle="ciyu">预览指令</button>
+      </div>
+      <div class="preview" id="prev-ciyu"></div>
+    </div>
+  </div>
+
+  <!-- 阅读闯关 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="tag read">阅读闯关</span>
+      <h3>课文阅读闯关 · 出题指令</h3>
+      <p class="desc">把一篇课文做成伴读式闯关：先把握全文结构，再顺着课文逐段理解内容、人物与写作手法，最后主旨拓展。由你提供教学思路，Claude 据此设计。</p>
+      <div class="meta">
+        <span class="chip">先结构 · 后逐段 · 终主旨</span>
+        <span class="chip">教师思路驱动</span>
+        <span class="chip">输出 JSON</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <p class="tip">末尾要填：<b>课文全文</b>，以及（可选）<b>每个意义段你想考的内容 / 人物 / 写作手法 / 思考题</b>。留空处 Claude 会补并标注。</p>
+      <div class="btn-row">
+        <button class="copy-btn" data-target="reading">
+          <span class="ico">⧉</span><span class="label">复制阅读闯关指令</span>
+        </button>
+        <button class="preview-btn" data-toggle="reading">预览指令</button>
+      </div>
+      <div class="preview" id="prev-reading"></div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="line"></div>
+    CLever 华文通 · 词语闯关与课文阅读平台<br>指令版本：词语 v7 · 阅读 v1
+  </footer>
+</div>
+
+<script type="text/plain" id="src-ciyu"># 词语闯关 · 出题 Prompt v7（新加坡偏误强化版）
+
+> v7 升级：干扰项必须基于新加坡学生五大偏误库
+> 1. 英语负迁移  2. 量词偏误  3. 近义词混淆
+> 4. 同音别字   5. 成语降维误用
+
+复制下面整段到 Claude.ai 网页版：
+
+---
+
+我是新加坡中学华文教师，30 年教学经验。请根据我提供的课文，给我出一份词语闯关题库（JSON 格式）。
+
+# 教学目标
+
+让学生学会：
+1. **从课文上下文推测词义**（培养真实阅读能力）
+2. **从构词角度拆解词语**（培养举一反三能力）
+3. **避免新加坡学生五大典型偏误**（针对性巩固）
+
+学生**不是来背词义**的，是来学会**怎么自己猜词、避免常见错误**。
+
+# 学生背景
+
+- 新加坡中学华文 Higher Chinese 学生
+- 中等及偏弱程度
+- 英语是主导语言，写华文时常受英语思维干扰
+- 例句要贴近新加坡学生生活：MRT、组屋、食阁、邻里学校、华人新年、社区图书馆
+- 不要用中国大陆才有的事物（高铁、外卖小哥、双11、北京天津）
+- 避免文言、太书面的表达
+- 不讲古汉语字源（不要说"诲字从言从每"），只讲字面意思
+
+# 🎯 核心升级：干扰项必须基于新加坡学生五大偏误库
+
+**这是 v7 最重要的原则。** 不要凭空想象干扰项，必须从以下五大偏误库选取。
+
+## 📚 五大偏误库（新加坡学生真实错误）
+
+### 偏误 1：英语负迁移（直译式搭配）
+
+英语主导的学生会把英文词组逐字硬译成华文：
+
+| 错误（直译） | 正确（华文规范） | 英文源头 |
+|---|---|---|
+| 拿考试 | 参加考试 / 应考 | take an exam |
+| 减少压力 | 减轻 / 缓解压力 | reduce stress |
+| 见医生 | 看医生 / 看病 | see a doctor |
+| 我的英文很重 | 我的英文口音很重 | heavy accent |
+| 做朋友 | 交朋友 | make friends |
+| 开始一个公司 | 创办一家公司 | start a company |
+| 严重的问题 | 严峻的问题 | serious problem |
+
+**用作干扰项的方法**：把目标词的正确搭配，改成"英语直译"的错误搭配。
+
+### 偏误 2：本土口语方言泛化（万能量词）
+
+新加坡学生受方言影响，量词高度简化：
+
+- 「一**粒**」乱用：一粒西瓜、一粒气球、一粒太阳（应是"个"）
+- 「一**只**」乱用：一只船、一只车（应是"艘/辆"）
+- 「一**个**」万能化：一个建议、一个想法（有些应是"条/项/份"）
+
+**用作干扰项的方法**：在选项里故意用错量词，看学生能否识别。
+
+### 偏误 3：近义词/关联词混淆（O Level Paper 2 重灾区！）
+
+一词多译导致的混淆——这是新加坡 O Level 失分最严重的部分：
+
+| 易混词对 | 区别 | 学生常犯错误 |
+|---|---|---|
+| 或者 vs 还是 | 还是用于疑问句 | "你想去打球**或者**踢球？"（应是"还是"）|
+| 反映 vs 反应 | 反映=表达；反应=回应 | "他的成绩**反应**了努力"（应是"反映"）|
+| 怀疑 vs 疑惑 | 怀疑=不信任；疑惑=不明白 | "我对题目很**怀疑**"（应是"疑惑"）|
+| 减少 vs 减轻 | 减少=数量；减轻=程度 | "**减少**压力"（应是"减轻"）|
+| 看 vs 见 | 看=动作；见=看到 | "我**见**电影"（应是"看"）|
+| 教导 vs 教训 vs 教诲 | 教诲=反复教导道理 | 大词小用 |
+| 维护 vs 保护 vs 保持 | 维护=抽象（荣誉/秩序） | "**维护**身体健康"（应是"保持"）|
+| 提高 vs 提升 vs 增加 | 各有适用对象 | "**增加**水平"（应是"提高"）|
+
+**用作干扰项的方法**：让干扰项用一个近义词替换目标词，看学生能否识别细微差异。
+
+### 偏误 4：拼音输入同音/形近别字
+
+学生只输入拼音，对字形不敏感：
+
+| 学生写的 | 正确 | 偏误类型 |
+|---|---|---|
+| 因该努力 | 应该努力 | 同音 yīng |
+| 捡查身体 | 检查身体 | 形近 |
+| 检察身体 | 检查身体 | 同音 jiǎn chá |
+| 生活水瓶 | 生活水平 | 同音 píng |
+| 努利学习 | 努力学习 | 形近 |
+| 心清舒畅 | 心情舒畅 | 形近 |
+| 同情人物 | 同情心物（同情心） | 字序混乱 |
+| 鼓励发言 vs 鼓舞士气 | 区别 | 近义动词混淆 |
+
+**用作干扰项的方法**：在第3关陷阱关，让某个例句里用了"错别字"（学生真的会写错的字）。
+
+### 偏误 5：成语降维误用（望文生义）
+
+学生背成语但不理解语境：
+
+| 学生错误 | 错在哪里 |
+|---|---|
+| 心情五颜六色 | 五颜六色形容**色彩**，不形容心情 |
+| 成绩美不胜收 | 美不胜收形容**景物**，不形容成绩 |
+| 半途而废回家 | 半途而废是**抽象放弃**，不是物理走一半 |
+| 食物刻骨铭心 | 大词小用，刻骨铭心是用于深刻经历 |
+| 友谊一帆风顺 | 一帆风顺形容**事情进展**，不形容关系 |
+| 一诺千金答应洗碗 | 大词小用，一诺千金用于重要承诺 |
+| 经过千辛万苦，一帆风顺地完成 | 逻辑矛盾，前面困难+后面顺利 |
+| 师恩感激他对我的批评 | 师恩=老师的恩情，不是单次批评 |
+| 开卷有益看了一部电影 | 开卷=读书，不是看电影 |
+
+**用作干扰项的方法**：在第3关陷阱关，让某个例句"形容对象错误"或"大词小用"。
+
+# ⚠️ 三个最重要的出题原则
+
+## 🎲 原则 1：正确答案必须随机分布
+
+每出一题，正确答案位置（0/1/2）必须随机。出完所有题后：
+- A 选项（correct: 0）占比 25-40%
+- B 选项（correct: 1）占比 25-40%
+- C 选项（correct: 2）占比 25-40%
+
+**禁止**：默认放 A、连续 3 题同位置、某位置占比超 50%。
+
+## 📚 原则 2：选项情境多样化
+
+- 课文情境：每个词的所有选项中，最多 1-2 个用课文情境
+- 课外情境：其他来自家庭、学校、邻里、节庆、兴趣场景
+- 三关共 9 选项，课文情境 2-3 个，课外 6-7 个
+
+## 🧩 原则 3：词义关（第1关）用构词推理或语境推理
+
+### 方式 A：构词推理（适合两字合成词：师恩、教诲、勤奋）
+
+```
+课文里说：「[课文一句话]」
+
+「[词语]」这个词，「[字1]」是 [字1意思]，「[字2]」是 [字2意思]。
+两个字合起来，意思最接近：
+```
+
+### 方式 B：语境推理（适合成语：一帆风顺、未雨绸缪）
+
+```
+课文里有句话：「[完整课文句子]」
+
+从这句话推测，「[词语]」最可能是什么意思？
+```
+
+**构词分析只到字面意思**，不讲字源、偏旁、古汉语。
+
+# 🎯 词语类型 × 偏误库的搭配（最重要！）
+
+不同类型的词，应该用不同的偏误库做干扰项：
+
+| 词语类型 | 例子 | 推荐用的偏误 | 推荐用的偏误 |
+|---|---|---|---|
+| **成语类**（4字） | 一帆风顺、未雨绸缪、师恩难忘 | 偏误 5（成语降维误用）| 偏误 3（近义成语混淆）|
+| **合成动词** | 维护、教诲、提高 | 偏误 3（近义词混淆）| 偏误 1（英语负迁移）|
+| **抽象名词** | 友谊、师恩、压力 | 偏误 1（英语负迁移）| 偏误 3（近义词混淆）|
+| **常用动宾搭配** | 检查、看病、参加 | 偏误 4（同音别字）| 偏误 1（英语负迁移）|
+| **形容词/副词** | 新颖、尴尬、谆谆 | 偏误 3（近义词混淆）| 偏误 5（语境误用）|
+| **数量/量词** | 一粒/一个/一项 | 偏误 2（量词错误）| 偏误 3（近义量词）|
+
+**核心规则**：每道题的 2 个干扰项，**至少有 1 个**来自上面表格推荐的偏误类型。
+
+# 🔍 干扰项强度自检（每道题出完都要做！）
+
+对每个干扰项问 3 个问题：
+1. **真实性检查**：这个错误是新加坡学生**真的会犯**的吗？还是凭空想象？
+   - ❌ 如果答案是凭空想象 → **重出**
+2. **难度检查**：中等程度学生看一眼会立刻排除吗？
+   - ❌ 如果"立刻排除" → **太弱，重出**
+3. **教育价值**：学生答错后，能学到一个具体的偏误规则吗？
+   - ❌ 如果"学不到东西" → **重出**
+
+**铁律**：**如果你想出一个"完全不沾边"的干扰项，停下来，去五大偏误库找替代。**
+
+# 🎨 tip / whyCorrect / whyWrong 用图标短句（v5 沿用）
+
+学生不爱读长文字，所有解释字段用图标短句。
+
+## 图标含义
+
+| 图标 | 用途 |
+|---|---|
+| 🧩 | 拆字 |
+| 🔗 | 同类词 |
+| 💡 | 猜词窍门 |
+| ⚠️ | 易错点 |
+| ✨ | 一句话记住 |
+| 🇸🇬 | 新加坡学生注意（英语直译陷阱等）|
+
+## 格式规则
+
+- 每行一个图标 + 一句话（≤15 字）
+- tip 最多 3 行
+- whyWrong 要点明"这是哪类偏误"
+
+# JSON 格式范例
+
+```json
+[
+  {
+    "word": "教诲",
+    "pinyin": "jiào huì",
+    "difficulty": "hard",
+    "meaning": {
+      "scene": "👨‍🏫 💡",
+      "caption": "「老师又一次告诉我们……」",
+      "prompt": "课文里说：「老师对我们的教诲，至今难忘。」\n\n「教诲」这个词，「教」是教导，「诲」也是教导。\n两个字合起来，意思最接近：",
+      "options": [
+        "老师对学生的批评和责备",
+        "老师反复给学生的教导启发",
+        "老师上课时教给我的知识"
+      ],
+      "correct": 1,
+      "tip": "🧩 教=教导，诲=教导 → 反复教导\n🔗 同类词：训诲、教训\n✨ 教诲 ≠ 批评、≠ 上课"
+    },
+    "usage": {
+      "prompt": "下面哪个最适合用「教诲」？",
+      "options": [
+        "外婆经常告诉我做人要诚实善良",
+        "妈妈让我去食阁买晚餐",
+        "数学老师在白板上写公式"
+      ],
+      "correct": 0,
+      "tip": "✨ 教诲 = 长辈讲做人道理\n⚠️ 不用在日常小事或单纯教知识"
+    },
+    "trap": {
+      "prompt": "下面哪一句最恰当？",
+      "options": [
+        "老师叫我去办公室拿作业本，这是一次<u>教诲</u>。",
+        "我把功课交给同学批改，他<u>教诲</u>我改正错误。",
+        "爷爷常常<u>教诲</u>我，做人要懂得感恩。"
+      ],
+      "correct": 2,
+      "whyCorrect": "✅ 长辈讲做人道理 = 教诲",
+      "whyWrong": "❌ A：日常小事不用「教诲」（偏误5：大词小用）\n❌ B：同学之间不用「教诲」（偏误3：教诲 vs 教）",
+      "remember": "✨ 教诲 = 长辈/老师讲做人道理"
+    }
+  }
+]
+```
+
+**注意上面例子的干扰项**：
+- meaning 关：
+  - A「批评和责备」← 真实错误（情感色彩混淆）
+  - C「上课时教知识」← 真实错误（教诲 ≠ 上课）
+- usage 关：
+  - B「让我去食阁买晚餐」← 大词小用
+  - C「白板上写公式」← 教诲 ≠ 教知识
+- trap 关：
+  - A 大词小用（拿作业本太小事）
+  - B 教诲 vs 教（同学之间用错）
+
+**每个干扰项都对应真实的偏误类型**，不是凭空想象！
+
+# 出题前检查清单（出题前必填）
+
+请先在心里列出：
+
+| 词语 | 难度 | 类型 | 用偏误库 | meaning位置 | usage位置 | trap位置 |
+|---|---|---|---|---|---|---|
+| 词1 | hard | 成语 | 偏误5+偏误3 | A | C | B |
+| 词2 | hard | 合成动词 | 偏误3+偏误1 | B | A | C |
+| 词3 | easy | 普通词 | 偏误4 | / | / | A |
+
+确保：
+- A/B/C 三个位置分布均匀
+- 每个词用的偏误库**符合上面推荐表**
+
+---
+
+# 我的课文
+
+**课文标题**：[在这里填]
+
+**年级和单元**：[例如：Sec 1 单元二 第三课]
+
+**课文全文**：
+[在这里贴课文全文]
+
+**要出题的词语**：
+
+| # | 词语 | 难度 |
+|---|---|---|
+| 1 | [词1] | hard |
+| 2 | [词2] | hard |
+| 3 | [词3] | easy |
+
+---
+
+# 输出要求
+
+1. **只输出 JSON**，不要任何说明文字、不要 markdown 代码块包裹
+2. JSON 以 `[` 开头，`]` 结尾
+3. 所有字段名用英文双引号
+4. `correct` 是数字（0/1/2）
+5. 选项数量保持 3 个
+6. **每道题的 2 个干扰项，至少 1 个来自五大偏误库**
+7. **whyWrong 字段必须标注偏误类型**（例：「偏误1：英语直译」「偏误3：近义词混淆」「偏误5：大词小用」）
+8. tip / whyCorrect / whyWrong / remember 用图标短句格式（每行≤15 字）
+9. 出完后自检：A/B/C 分布、偏误项覆盖、是否有"凭空想象的干扰项"
+10. **最重要：宁可让题目变难，也不要"一看就知道"的弱干扰项**</script>
+<script type="text/plain" id="src-reading"># 课文阅读闯关出题 Prompt（教师思路驱动 · 逐段闯关版 v1）
+
+> **使用方法**：把这整份内容复制到 Claude.ai 对话框，在最后【教师备课区】填好你的课文和教学思路，Claude 会先给你结构大纲 review，确认后再逐段出题，最后整合成可直接导入系统的 JSON。
+>
+> **v1 与旧版（侦探闯关 v3）的区别**：
+> - ❌ 去掉「侦探破案」主题外壳（《恐怖事件》一课保留旧版，其余课文用本版）
+> - ❌ 去掉「5 大能力档案横切」结构（不再按 S1人物反应/S2人物描写/… 把题目分箱）
+> - ✅ 改成「先把握结构 → 顺着课文逐意义段闯关 → 主旨拓展开放题」的伴读式路径
+> - ✅ 出题主导权交给老师：**老师提供教学思路，你据此设计**，不再自己当专家拍板考点
+> - ✅ 能力点 S0–S5 保留为隐藏标签（用于日后错题能力分析），但不再当学生可见的结构骨架
+
+---
+
+# 你的角色
+
+你是新加坡中学华文 Higher Chinese 阅读教学的助教。一位有 30 年经验的华文老师会给你一篇课文 + 她的教学思路。
+
+**你的任务不是替老师决定怎么教，而是把老师的教学思路，转化成一套学生伴读式的互动闯关题。** 老师写下的重点、想考的人物点、想点出的写作手法、想让学生思考的问题，就是你出题的依据。老师没写到的地方，你才用专业判断补上，并在大纲里标注「（AI 补充）」让老师过目。
+
+---
+
+# 学生背景（出题时始终记住）
+
+- 新加坡中学 HCL 学生（Sec 1–4），中等及偏弱程度
+- 英语是主导语言，中文阅读理解能力中等
+- 例句、情境要贴近新加坡：MRT、组屋、食阁、邻里学校、华人新年、社区图书馆
+- 不要用中国大陆才有的事物（高铁、双 11、外卖小哥、北京天津）
+- 解析要清晰、口语化、避免文言
+- **深度 > 速度**：宁可题目想久一点，也不要一眼能蒙对的浅题
+
+---
+
+# 文体说明
+
+本 prompt 以**记叙文**最契合（先结构、再逐段、后主旨）。
+- 若课文是**说明文/议论文**，照样可用本框架，但「人物理解」类的考点改为「说明对象/论点理解」，逐段闯关的落点也相应调整。出大纲时主动说明你做了哪些适配。
+
+---
+
+# 学习路径（本框架的灵魂，三段式）
+
+```
+第一关：把握结构（鸟瞰全文）
+   └ 理清文章脉络、情节线/论证线，建立全局地图
+
+第二关 ~ 第 N 关：逐意义段闯关（顺着课文走）
+   └ 每个意义段一关，在这一关里就地考：
+       · 这段讲了什么（内容理解）
+       · 这段的人物（动机/心理/反应；说明文则为说明对象）
+       · 这段的写作手法（人物描写 / 修辞 / 关键句）
+   └ 不再把「人物」「描写」「修辞」拆成独立档案横切，
+     而是读到哪段就考那段该考的东西。
+
+最后一关：主旨拓展（开放思考）
+   └ 抓住作者真正想说的，联系自己，回答 1–2 道开放题。
+```
+
+---
+
+# 怎么把课文切成「意义段」
+
+不是一自然段一关（太碎），而是**按意义把相邻自然段合并成闯关单元**：
+
+- 一个意义段 = 故事/论证的一个完整环节（如：起因 / 转折 / 高潮 / 结局；或论点一 / 论点二）
+- 通常 2–4 个自然段合成一个意义段
+- 一篇课文切成 **3–5 个意义段**比较合适
+
+**切分依据优先用老师在备课区写的结构**；老师没切的，你来切并在大纲里说明理由。
+
+---
+
+# 题量弹性规则（先数字数，再定题量）
+
+| 课文字数 | 意义段数（建议） | 总题数 | 分配示意 |
+|---|---|---|---|
+| 短课文 < 800 字 | 3 个意义段 | 14–16 题 | 结构关 3 + 每段 3 + 主旨 2 |
+| 中课文 800–1500 字 | 4 个意义段 | 17–19 题 | 结构关 4 + 每段 3 + 主旨 2 |
+| 长课文 > 1500 字 | 5 个意义段 | 20–22 题 | 结构关 4 + 每段 3 + 主旨 2 |
+
+**输出大纲前先说一句**：「检测课文约 XXX 字，切成 X 个意义段，共 X 题」。
+
+---
+
+# 🔴 两条全局铁律（任何课文都遵守）
+
+## 铁律一：choice 题答案位置必须打散到 A/B/C
+
+针对所有 `choice` 题（不含 short_answer / match / logic-chain / sentence-pick）：
+
+- 任何位置（A=0 / B=1 / C=2）都**不能超过 5 题**
+- 不要连续 3 题答案在同一位置
+- 全部出完后**数一遍**每个位置的命中数，超标就调换选项顺序（注意保持选项语义合理）
+
+> 教训来源：旧题库实测 choice 题 C 位置占 46%，学生几题就摸到规律。
+
+## 铁律二：每一关最后一题尽量是 short_answer（深度学习的灵魂）
+
+- **结构关**末尾可省（用 match/logic-chain 已够分量）
+- **每个逐段闯关关卡**最后一题：一道开放思考题（这段人物心里真的这样想吗？这处描写的言外功能是什么？）
+- **主旨关**：1–2 道 short_answer（你赞同作者吗？联系自己生活说一说）
+- short_answer 不计入「答案位置打散」统计
+
+---
+
+# 干扰项原则（与词语闯关一脉相承：看似合理但偏离主旨）
+
+## ✅ 好干扰项
+- 表述语法通顺，但**偏离了段落/全文主旨**
+- 学生常见的**误读**（如把反语理解成字面意思、把铺垫当成主要事件）
+- 看似对，但**少了关键限定**或**绝对化**（「完全/总是/绝对」）
+
+## ❌ 绝对禁止的凑数干扰项
+- 「因为字数不够」「因为有错别字」「作者随便写的、删掉也行」
+- 明显荒谬、一眼排除的选项
+- 一个选项又长又对、另两个短得没诚意
+
+**自检**：每个干扰项问自己——中等程度学生看一眼会不会立刻排除？会 → 太弱，重出。
+
+---
+
+# 双语策略（v6 定型，不要退回）
+
+- ✅ **只翻译学术术语**（抒情句、议论句、铺垫、夸张、反语等），进 `terms` 词典，HTML 端自动加英文 tooltip
+- ✅ 题干、选项、解析仍提供 `promptEn / optionsEn / explanationEn` 英文字段（中文为主，英文辅助理解）
+- ❌ 不加整段英文翻译按钮、不加参考答案英文版以外的冗余英文
+- ❌ 不在术语旁加「EN」小角标
+
+---
+
+# 能力点标签（隐藏，用于错题分析，不当结构骨架）
+
+每道题仍带一个 `skill` 字段，方便日后做能力维度统计。但学生看到的关卡名是「第二关 · 童年的阴影」这种**贴合内容**的名字，不是「S2 人物描写档案」。
+
+| 代号 | 能力 | 测什么 |
+|---|---|---|
+| S0 | 通读全局 | 脉络、骨架、主题 |
+| S1 | 人物反应 | 动机、心理、为什么这样反应 |
+| S2 | 人物描写 | 神态/动作/语言/心理描写的辨认与功能 |
+| S3 | 修辞与句子 | 比喻/夸张/拟人识别、修辞作用、用词精准 |
+| S4 | 言外之意 | 引号/反语/双关/矛盾修辞背后的真意 |
+| S5 | 作者观点 | 「我」≠作者、观点依据、评价观点、联系生活 |
+
+逐段闯关时，一关里往往同时出现 S1/S2/S3/S4——这正常，因为是顺着课文走，不是按能力分箱。
+
+---
+
+# 输出 JSON 的顶层结构（必须与现有系统一致）
+
+```json
+{
+  "lesson_meta": {
+    "title_cn": "课文标题",
+    "title_en": "English Title",
+    "source": "新加坡中学华文课文",
+    "grade": "Sec 2",
+    "unit": "单元X",
+    "lesson_no": "第X课",
+    "lesson_type": "narrative"
+  },
+  "story": {
+    "title": "课文标题",
+    "titleEn": "ENGLISH TITLE",
+    "paragraphs": ["第1段全文", "第2段全文", "..."]
+  },
+  "terms": {
+    "术语或难词": { "en": "English explanation" }
+  },
+  "quiz": [
+    { "phase": "...", "phaseName": "...", "questions": [ ... ] }
+  ]
+}
+```
+
+## phase（关卡）对象结构
+
+```json
+{
+  "phase": "phase-1",
+  "phaseName": "第一关：把握全文脉络",
+  "phaseNameEn": "Stage 1: The Big Picture",
+  "phaseSubtitle": "STAGE 1 — BIG PICTURE",
+  "phaseIntro": {
+    "icon": "🗺️",
+    "title": "先看清这篇文章的骨架",
+    "titleEn": "See the skeleton first",
+    "desc": "在钻进细节前，先鸟瞰全文，理清从开头到结尾发生了什么。",
+    "descEn": "Before the details, get the big picture.",
+    "skills": ["理脉络", "找主线", "抓主题"]
+  },
+  "questions": [ ... ]
+}
+```
+
+**关卡命名规则**：
+- `phase-1` = 结构关，phaseName 用「第一关：把握全文脉络」
+- 逐段关用 `phase-2`、`phase-3`…，phaseName 用**贴合该段内容的名字**，例：「第二关：歪脖子的童年」「第三关：那场照片展」
+- 最后一关 `phase-N`，phaseName 用「第N关：作者想告诉我们什么」
+
+---
+
+# 五种题型 JSON 规范（沿用现有系统，勿改字段名）
+
+## 题型 1：choice（单选）
+```json
+{
+  "id": "Q6", "skill": "S1", "type": "choice",
+  "skillTagText": "能力点·人物心理",
+  "skillTagEn": "SKILL · Character Psychology",
+  "prompt": "题干中文，可用 <strong>加粗</strong>，可用 \\n 换行。",
+  "promptEn": "Question in English.",
+  "options": ["选项A", "选项B", "选项C"],
+  "optionsEn": ["Option A", "Option B", "Option C"],
+  "correct": 2,
+  "explanation": "解析中文。",
+  "explanationEn": "Explanation."
+}
+```
+
+## 题型 2：match（连线 —— 结构关理脉络主力）
+```json
+{
+  "id": "Q1", "skill": "S0", "type": "match",
+  "skillTagText": "能力点·理脉络",
+  "skillTagEn": "SKILL · Story Map",
+  "prompt": "把每个段落范围和它在文章里的作用连起来。",
+  "promptEn": "Match each paragraph range to its role.",
+  "rows": [
+    {"left": "1-2 段", "options": ["背景", "起因", "经过", "结果", "感悟"], "correct": 0},
+    {"left": "3-7 段", "options": ["背景", "起因", "经过", "结果", "感悟"], "correct": 2}
+  ],
+  "explanation": "...", "explanationEn": "..."
+}
+```
+
+## 题型 3：logic-chain（逻辑链 —— 理情节线/论证线）
+```json
+{
+  "id": "Q2", "skill": "S0", "type": "logic-chain",
+  "skillTagText": "能力点·情节链",
+  "skillTagEn": "SKILL · Story Logic",
+  "prompt": "补上情节链里缺的关键一步。",
+  "promptEn": "Fill in the missing step.",
+  "chain": [
+    {"type": "given", "text": "一开始：「我」因脖子歪而自卑"},
+    {"type": "blank", "options": ["A", "B", "C"], "correct": 2, "hint": "转折点是什么？"},
+    {"type": "arrow", "text": "↓ 然后 Then"},
+    {"type": "given", "text": "同学帮她设计了姿势"}
+  ],
+  "explanation": "...", "explanationEn": "..."
+}
+```
+
+## 题型 4：sentence-pick（找句子 —— 抒情/议论/关键句）
+```json
+{
+  "id": "Q3", "skill": "S5", "type": "sentence-pick",
+  "skillTagText": "能力点·找抒情句",
+  "skillTagEn": "SKILL · Find Emotive Sentence",
+  "prompt": "下面哪一句是抒情句？",
+  "promptEn": "Which one is the emotive sentence?",
+  "sentences": ["句子A", "句子B", "句子C"],
+  "sentencesEn": ["Sentence A", "Sentence B", "Sentence C"],
+  "correct": [1],
+  "explanation": "...", "explanationEn": "..."
+}
+```
+
+## 题型 5：short_answer（开放回答 —— 每关收尾 + 主旨拓展）
+```json
+{
+  "id": "Q9", "skill": "S1", "type": "short_answer",
+  "skillTagText": "能力点·开放思考",
+  "skillTagEn": "SKILL · Open Reflection",
+  "prompt": "宜欣嘴上说「我没有美的姿势」，她心里真的这样认为吗？写 2-3 句。",
+  "promptEn": "Does she really believe she has no beautiful pose? 2-3 sentences.",
+  "wordLimit": "40-80 字",
+  "keywords": ["自卑", "不相信", "其实渴望", "害怕", "缺陷"],
+  "minKeywords": 2,
+  "sampleAnswer": "参考答案中文。",
+  "hint": "想一想：她为什么宁可沉默？（用提示扣半分）"
+}
+```
+
+---
+
+# 评分原则（短答题）
+
+> **语言宽松、内容严格**
+
+- 学生写出来、论点站得住 → 不苛责语言瑕疵
+- 但论点准确、扣住主旨 → 严格
+- 用关键词命中数判断，`minKeywords` 一般 2–3 个，别太严也别太松
+
+---
+
+# 你的工作流程（务必分两步，不要一口气写完）
+
+## 第一步：先输出「结构大纲」给老师 review（不要写 JSON）
+
+1. 一句话报字数和配置：「检测课文约 XXX 字，切成 X 个意义段，共 X 题」
+2. **意义段切分表**：每个意义段 = 第几段到第几段 + 这段在文章里的作用 + 一句话内容概括
+3. **逐关闯关大纲**（表格）：关卡名 / 对应意义段 / 每题的题型 + 能力点 + 一句话考点。老师没指定、你补的地方标「（AI 补充）」
+4. **terms 候选清单**：学术术语 + 课文专属难词
+5. 末尾问老师：「这个结构和考点你认可吗？要调整哪一关？确认后我逐关出完整 JSON。」
+
+## 第二步：老师确认后，逐关输出完整 JSON
+
+- 一关一关出，每出完一关停下来让老师过目，避免一次写完后大改
+- 全部出完后，输出**最终自检表**：
+  - [ ] 总题数符合配置
+  - [ ] choice 题 A/B/C 位置统计（列出各几题，确认无位置超 5）
+  - [ ] 每个逐段关末尾有 short_answer，主旨关有 1–2 道
+  - [ ] 无凑数干扰项
+  - [ ] terms 覆盖所有题干/解析用到的学术术语
+  - [ ] 顶层结构 = {lesson_meta, story, terms, quiz}，可直接导入
+- 自检不达标的，先自己修好再交。
+
+---
+
+# 输出格式要求
+
+1. 第二步的最终成品**只输出 JSON**，不要 markdown 代码块包裹，以 `{` 开头 `}` 结尾
+2. 所有字段名用英文双引号
+3. `correct` 在 choice/match/logic-chain 里是数字，在 sentence-pick 里是数组
+4. 中文字段里换行用 `\n`，加粗用 `<strong>`
+5. 课文原文**一字不改**填进 `story.paragraphs`（一段一个数组元素）
+
+---
+
+# ✍️ 教师备课区（老师在这里填，没填的地方 Claude 补并标注）
+
+## A. 课文基本信息
+- **课文标题**：[填]
+- **年级 / 单元 / 课次**：[例：Sec 2 单元四 第二课]
+- **文体**：[记叙文 / 说明文 / 议论文]
+- **课文全文**（一段一行，保留原文）：
+
+```
+[在这里贴课文全文]
+```
+
+## B. 我对全文结构的理解（可选，没填 Claude 帮切）
+- 我想把课文分成这几个意义段：
+  - 意义段一（第 __ 段到第 __ 段）：这段讲 ______
+  - 意义段二（第 __ 段到第 __ 段）：这段讲 ______
+  - 意义段三（第 __ 段到第 __ 段）：这段讲 ______
+  - （按需增减）
+
+## C. 每个意义段我想考的点（核心！这是你出题的依据）
+
+> 每段填三栏，能填多少填多少，留空的 Claude 补并标「（AI 补充）」。
+
+### 意义段一
+- 内容理解上，我想让学生抓住：______
+- 人物方面，我想考：______（谁的什么反应/心理/动机）
+- 写作手法上，这段有：______（哪句用了什么修辞 / 哪种人物描写 / 哪个关键词用得好）
+- 我想让学生思考的开放问题：______
+
+### 意义段二
+- 内容理解：______
+- 人物：______
+- 写作手法：______
+- 开放思考：______
+
+### 意义段三
+- 内容理解：______
+- 人物：______
+- 写作手法：______
+- 开放思考：______
+
+（按意义段数量复制以上小节）
+
+## D. 主旨与拓展（最后一关）
+- 这篇课文的中心思想，我认为是：______
+- 我想让学生联系自己生活思考的问题：______
+
+## E. 自由备注（任何上面没覆盖的想法、提醒、易错点、想避开的坑）
+
+```
+[随便写，Claude 会读]
+```
+</script>
+
+<script>
+function getText(key){
+  return document.getElementById('src-'+key).textContent;
+}
+// preview fill
+['ciyu','reading'].forEach(function(k){
+  document.getElementById('prev-'+k).textContent = getText(k);
+});
+// copy
+document.querySelectorAll('.copy-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var key = btn.getAttribute('data-target');
+    var text = getText(key);
+    var done = function(){
+      var label = btn.querySelector('.label');
+      var ico = btn.querySelector('.ico');
+      var oldL = label.textContent, oldI = ico.textContent;
+      btn.classList.add('ok'); ico.textContent='✓'; label.textContent='已复制到剪贴板';
+      setTimeout(function(){ btn.classList.remove('ok'); ico.textContent=oldI; label.textContent=oldL; }, 2000);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(function(){ fallback(text, done); });
+    } else { fallback(text, done); }
+  });
+});
+function fallback(text, cb){
+  var ta=document.createElement('textarea');
+  ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){ alert('复制失败，请手动选择预览内容复制'); }
+  document.body.removeChild(ta);
+}
+// preview toggle
+document.querySelectorAll('.preview-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var key=btn.getAttribute('data-toggle');
+    var box=document.getElementById('prev-'+key);
+    var open=box.classList.toggle('show');
+    btn.textContent = open ? '收起预览' : '预览指令';
+  });
+});
+</script>
+</body>
+</html>
