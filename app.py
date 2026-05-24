@@ -45,17 +45,12 @@ st.markdown("""
 [data-testid="stSidebarNav"] ul li:nth-child(5) {
     display: none !important;
 }
-
-/* v7.1：把侧边栏第一个链接的文字「app」改成「课文词语闯关」 */
-/* 用 font-size:0 隐藏原文字，::before 注入新文字（这种写法容器会自动撑开）*/
-[data-testid="stSidebarNav"] ul li:first-child a span {
-    font-size: 0;
-}
-[data-testid="stSidebarNav"] ul li:first-child a span::before {
-    content: "课文词语闯关";
-    font-size: 14px;
-    white-space: nowrap;
-}
+/* v7.2 BUGFIX：移除「把 app 改名为 课文词语闯关」的 CSS hack。
+   原写法 [stSidebarNav] li:first-child a span { font-size:0 } 在 iPad Safari
+   上会连带命中 st.radio 的选项文字（年级/单元/课文），导致只显示红绿圆点、
+   看不到文字。桌面 Chrome 的 DOM 层级不同所以没暴露。
+   侧边栏默认 collapsed，学生看不到，第一项显示 "app" 不影响使用。
+   如需美化导航名，后续用 st.navigation + st.Page 原生方案，不要再用 CSS hack。*/
 </style>
 """, unsafe_allow_html=True)
 
