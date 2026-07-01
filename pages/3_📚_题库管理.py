@@ -83,6 +83,38 @@ with tab1:
                                     st.session_state["confirm_delete_lesson"] = lid
                                     st.rerun()
 
+                            # ===== 关联阅读理解（预习流程用）=====
+                            # 绑定后，学生做完这篇词语闯关，会看到「继续做课文理解 →」按钮。
+                            reading_lessons = db.list_reading_lessons(only_published=False)
+                            if reading_lessons:
+                                current_link = db.get_lesson_linked_reading(lid)
+                                # 下拉选项：不关联 + 所有阅读理解课文
+                                opts = ["（不关联）"] + [
+                                    f"《{r['title_cn']}》· {r['grade']} {r['unit']} {r['lesson_no']}"
+                                    for r in reading_lessons
+                                ]
+                                id_by_idx = [None] + [r["id"] for r in reading_lessons]
+                                cur_idx = 0
+                                if current_link is not None and current_link in id_by_idx:
+                                    cur_idx = id_by_idx.index(current_link)
+                                sel = st.selectbox(
+                                    "🔗 关联阅读理解（学生做完词语后可直接续做）",
+                                    options=list(range(len(opts))),
+                                    format_func=lambda i: opts[i],
+                                    index=cur_idx,
+                                    key=f"link_sel_{lid}",
+                                )
+                                new_link = id_by_idx[sel]
+                                if new_link != current_link:
+                                    db.set_lesson_linked_reading(lid, new_link)
+                                    if new_link is None:
+                                        st.caption("已解除关联")
+                                    else:
+                                        st.caption("✅ 已关联，学生做完词语会看到「继续做课文理解」")
+                                    st.rerun()
+                            else:
+                                st.caption("🔗 还没有阅读理解课文可关联（先到「阅读理解管理」创建并发布）")
+
                             # 二次确认删除
                             if st.session_state.get("confirm_delete_lesson") == lid:
                                 st.warning(f"确定要删除 《{title}》 吗？删除后学生的历史成绩会保留，但学生看不到这一课了。")
