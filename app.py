@@ -480,17 +480,46 @@ def process_submission(payload: dict):
         st.success(f"🎉 成绩已提交！正确率 {acc}%，共获得 ⭐ {stars_earned} 颗星")
         st.balloons()
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📚 再选其他课文", use_container_width=True):
+        # ===== 预习流程：这篇课文若关联了阅读理解，突出"继续做课文理解" =====
+        linked_reading_id = db.get_lesson_linked_reading(lesson_id)
+
+        if linked_reading_id is not None:
+            st.markdown("#### 🎯 词语闯关完成！这一课还有课文理解，一起做完就是完整预习～")
+            if st.button("📖 继续做课文理解 →", type="primary", use_container_width=True):
+                # 直接把目标阅读理解课文选好，学生跳过去不用重新登录/选课
+                st.session_state.selected_reading_lesson = linked_reading_id
+                st.session_state.reading_session_token = str(uuid.uuid4())
+                # 清掉词语闯关状态，避免返回时残留
                 st.session_state.quiz_in_progress = False
                 st.session_state.selected_lesson_id = None
                 st.session_state.session_token = None
-                st.rerun()
-        with col2:
-            if st.button("🔄 重做这一课", use_container_width=True):
-                st.session_state.session_token = str(uuid.uuid4())
-                st.rerun()
+                st.switch_page("pages/4_📖_课文理解.py")
+
+            # 次要动作放小按钮
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("📚 先选其他课文", use_container_width=True):
+                    st.session_state.quiz_in_progress = False
+                    st.session_state.selected_lesson_id = None
+                    st.session_state.session_token = None
+                    st.rerun()
+            with col2:
+                if st.button("🔄 重做词语这一课", use_container_width=True):
+                    st.session_state.session_token = str(uuid.uuid4())
+                    st.rerun()
+        else:
+            # 没关联阅读理解：保持原有两个按钮
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("📚 再选其他课文", use_container_width=True):
+                    st.session_state.quiz_in_progress = False
+                    st.session_state.selected_lesson_id = None
+                    st.session_state.session_token = None
+                    st.rerun()
+            with col2:
+                if st.button("🔄 重做这一课", use_container_width=True):
+                    st.session_state.session_token = str(uuid.uuid4())
+                    st.rerun()
 
     except Exception as e:
         st.error(f"保存失败：{e}")
