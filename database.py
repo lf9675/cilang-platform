@@ -851,6 +851,51 @@ def init_reading_lessons_tables():
         c.execute("CREATE INDEX IF NOT EXISTS idx_reading_completion_student ON detective_completions(class_name, student_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_reading_lessons_grade ON reading_lessons(grade, unit, lesson_no)")
 
+        # ===== 轻交互精读闯关：会话总表（一次完整闯关的总结）=====
+        # 独立于词语闯关的 sessions 表，避免两套统计混在一起。
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS reading_sessions (
+                session_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                class_name TEXT NOT NULL,
+                student_id TEXT NOT NULL,
+                student_name TEXT NOT NULL,
+                reading_lesson_id INTEGER NOT NULL,
+                teacher_id INTEGER,
+                total_graded INTEGER NOT NULL,
+                correct_count INTEGER NOT NULL,
+                completed_at TEXT NOT NULL,
+                FOREIGN KEY (reading_lesson_id) REFERENCES reading_lessons(id),
+                FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id)
+            )
+        """)
+
+        # ===== 轻交互精读闯关：逐题答题记录（选项级诊断的数据源）=====
+        # chosen_content / correct_content 存"学生选了什么/正确是什么"的原文，
+        # 老师后台配合题目解析即可定位偏误，无需题库带机器可读偏误标签。
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS reading_attempts (
+                attempt_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                class_name TEXT NOT NULL,
+                student_id TEXT NOT NULL,
+                student_name TEXT NOT NULL,
+                reading_lesson_id INTEGER NOT NULL,
+                teacher_id INTEGER,
+                qid TEXT,
+                qtype TEXT,
+                tag TEXT,
+                is_correct INTEGER NOT NULL,
+                chosen_content TEXT DEFAULT '',
+                correct_content TEXT DEFAULT '',
+                answered_at TEXT NOT NULL,
+                FOREIGN KEY (reading_lesson_id) REFERENCES reading_lessons(id),
+                FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id)
+            )
+        """)
+        c.execute("CREATE INDEX IF NOT EXISTS idx_reading_attempts_lesson ON reading_attempts(reading_lesson_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_reading_attempts_class ON reading_attempts(class_name)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_reading_sessions_class ON reading_sessions(class_name)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_reading_sessions_teacher ON reading_sessions(teacher_id)")
+
 
 def create_reading_lesson(title_cn: str, title_en: str, source: str,
                           grade: str, unit: str, lesson_no: str,
@@ -1039,3 +1084,176 @@ def has_student_completed_reading(class_name: str, student_id: str, lesson_id: i
             LIMIT 1
         """, (class_name, student_id, lesson_id)).fetchone()
         return row is not None
+
+
+# ==================== 轻交互精读闯关 · 答题数据 ====================
+# 与词语闯关的 record_session / record_attempt 一一对应，只是写入独立的
+# reading_sessions / reading_attempts 表，互不干扰。
+
+def find_teacher_id_for_class(class_name: str):
+    """按班级名找负责老师的 teacher_id（标记答题归属用）。找不到返回 None。"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        row = c.execute(
+            "SELECT teacher_id FROM teacher_classes WHERE class_name = ? LIMIT 1",
+            (class_name,)
+        ).fetchone()
+        return row["teacher_id"] if row else None
+
+
+def record_reading_session(class_name: str, student_id: str, student_name: str,
+                           reading_lesson_id: int, teacher_id,
+                           total_graded: int, correct_count: int):
+    """记录一次完整精读闯关的总结"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        c.execute(
+            """INSERT INTO reading_sessions
+               (class_name, student_id, student_name, reading_lesson_id, teacher_id,
+                total_graded, correct_count, completed_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (class_name, student_id, student_name, reading_lesson_id, teacher_id,
+             int(total_graded), int(correct_count), datetime.now().isoformat())
+        )
+
+
+def record_reading_attempt(class_name: str, student_id: str, student_name: str,
+                           reading_lesson_id: int, teacher_id,
+                           qid: str, qtype: str, tag: str, is_correct: bool,
+                           chosen_content: str = '', correct_content: str = ''):
+    """记录精读闯关里的一道题（选项级诊断的原始数据）"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        c.execute(
+            """INSERT INTO reading_attempts
+               (class_name, student_id, student_name, reading_lesson_id, teacher_id,
+                qid, qtype, tag, is_correct, chosen_content, correct_content, answered_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (class_name, student_id, student_name, reading_lesson_id, teacher_id,
+             qid or '', qtype or '', tag or '', 1 if is_correct else 0,
+             chosen_content or '', correct_content or '', datetime.now().isoformat())
+        )
+
+
+def save_reading_result(payload: dict) -> tuple:
+    """一次性保存学生提交的精读闯关成绩（会话 + 每题）。
+    payload 结构由 reading_light_template.html 生成：
+      { class_name, student_id, student_name, reading_lesson_id,
+        total_graded, correct_count, attempts:[{qid,qtype,tag,is_correct,chosen,correct}] }
+    返回 (成功, 消息)。会话与逐题写入独立的 reading 表。
+    """
+    try:
+        class_name = payload.get("class_name", "")
+        student_id = payload.get("student_id", "")
+        student_name = payload.get("student_name", "")
+        reading_lesson_id = int(payload.get("reading_lesson_id"))
+        total_graded = int(payload.get("total_graded", 0))
+        correct_count = int(payload.get("correct_count", 0))
+        attempts = payload.get("attempts", []) or []
+
+        teacher_id = find_teacher_id_for_class(class_name)
+
+        record_reading_session(
+            class_name=class_name, student_id=student_id, student_name=student_name,
+            reading_lesson_id=reading_lesson_id, teacher_id=teacher_id,
+            total_graded=total_graded, correct_count=correct_count
+        )
+        for a in attempts:
+            record_reading_attempt(
+                class_name=class_name, student_id=student_id, student_name=student_name,
+                reading_lesson_id=reading_lesson_id, teacher_id=teacher_id,
+                qid=a.get("qid", ""), qtype=a.get("qtype", ""), tag=a.get("tag", ""),
+                is_correct=bool(a.get("is_correct", False)),
+                chosen_content=a.get("chosen", ""), correct_content=a.get("correct", "")
+            )
+        acc = round(correct_count * 100 / total_graded, 1) if total_graded > 0 else 0
+        return True, f"已记录：答对 {correct_count}/{total_graded}（{acc}%）"
+    except Exception as e:
+        return False, f"保存失败：{e}"
+
+
+def get_reading_session_summary(teacher_id: int, class_name: str = None,
+                                reading_lesson_id: int = None) -> list:
+    """老师后台：精读闯关的学生完成情况汇总（只看自己班级）"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        teacher_classes = get_teacher_classes(teacher_id)
+        if not teacher_classes:
+            return []
+        placeholders = ",".join(["?"] * len(teacher_classes))
+        params = list(teacher_classes)
+        where_extra = ""
+        if class_name:
+            where_extra += " AND rs.class_name = ?"
+            params.append(class_name)
+        if reading_lesson_id:
+            where_extra += " AND rs.reading_lesson_id = ?"
+            params.append(reading_lesson_id)
+        query = f"""
+            SELECT
+                rs.class_name, rs.student_id, rs.student_name,
+                rs.reading_lesson_id,
+                rl.grade || ' · ' || rl.unit || ' · ' || rl.lesson_no
+                    || ' 《' || rl.title_cn || '》' AS lesson_label,
+                rs.total_graded, rs.correct_count, rs.completed_at,
+                ROUND(rs.correct_count * 100.0 / rs.total_graded, 1) AS accuracy
+            FROM reading_sessions rs
+            JOIN reading_lessons rl ON rs.reading_lesson_id = rl.id
+            WHERE rs.class_name IN ({placeholders}) {where_extra}
+            ORDER BY rs.completed_at DESC
+        """
+        c.execute(query, params)
+        return [dict(r) for r in c.fetchall()]
+
+
+def get_reading_question_error_stats(teacher_id: int,
+                                     reading_lesson_id: int = None) -> list:
+    """老师后台：哪道题全班错得最多 + 学生最爱选的错误选项（选项级诊断核心）。
+    返回按错误率降序的题目列表，含最常见错误答案，帮老师定位集体偏误。
+    """
+    with get_conn() as conn:
+        c = conn.cursor()
+        teacher_classes = get_teacher_classes(teacher_id)
+        if not teacher_classes:
+            return []
+        placeholders = ",".join(["?"] * len(teacher_classes))
+        params = list(teacher_classes)
+        where_extra = ""
+        if reading_lesson_id:
+            where_extra = " AND ra.reading_lesson_id = ?"
+            params.append(reading_lesson_id)
+        # 每题总体错误率
+        query = f"""
+            SELECT
+                ra.reading_lesson_id, ra.qid, ra.qtype, ra.tag,
+                ra.correct_content,
+                COUNT(*) AS total_attempts,
+                SUM(CASE WHEN ra.is_correct = 0 THEN 1 ELSE 0 END) AS wrong_attempts,
+                ROUND(SUM(CASE WHEN ra.is_correct = 0 THEN 1 ELSE 0 END) * 100.0
+                      / COUNT(*), 1) AS error_rate
+            FROM reading_attempts ra
+            WHERE ra.class_name IN ({placeholders}) {where_extra}
+            GROUP BY ra.reading_lesson_id, ra.qid
+            ORDER BY error_rate DESC, total_attempts DESC
+        """
+        c.execute(query, params)
+        rows = [dict(r) for r in c.fetchall()]
+
+        # 为每题补上"最常被选的错误答案"（选项级诊断）
+        for row in rows:
+            wp = list(params)  # 复用班级过滤
+            top_wrong_sql = f"""
+                SELECT ra.chosen_content, COUNT(*) AS cnt
+                FROM reading_attempts ra
+                WHERE ra.class_name IN ({placeholders}) {where_extra}
+                  AND ra.reading_lesson_id = ? AND ra.qid = ?
+                  AND ra.is_correct = 0
+                GROUP BY ra.chosen_content
+                ORDER BY cnt DESC
+                LIMIT 1
+            """
+            wp2 = wp + [row["reading_lesson_id"], row["qid"]]
+            tw = c.execute(top_wrong_sql, wp2).fetchone()
+            row["top_wrong_answer"] = tw["chosen_content"] if tw else ""
+            row["top_wrong_count"] = tw["cnt"] if tw else 0
+        return rows
