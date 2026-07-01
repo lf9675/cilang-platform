@@ -116,6 +116,12 @@ def init_db():
             c.execute("ALTER TABLE attempts ADD COLUMN correct_content TEXT DEFAULT ''")
         except sqlite3.OperationalError:
             pass
+        # 预习流程：词语课文关联到哪篇阅读理解课文（reading_lessons.id）。
+        # NULL = 未关联，学生做完词语闯关不出现"继续做课文理解"按钮。
+        try:
+            c.execute("ALTER TABLE lessons ADD COLUMN linked_reading_id INTEGER")
+        except sqlite3.OperationalError:
+            pass
 
         # 学生会话总结表（一次完整闯关的总结）
         c.execute("""
@@ -309,11 +315,38 @@ def get_lesson(lesson_id: int) -> dict | None:
     with get_conn() as conn:
         c = conn.cursor()
         c.execute(
-            "SELECT lesson_id, grade, unit, lesson_no, title FROM lessons WHERE lesson_id = ? AND is_active = 1",
+            "SELECT lesson_id, grade, unit, lesson_no, title, linked_reading_id FROM lessons WHERE lesson_id = ? AND is_active = 1",
             (lesson_id,)
         )
         row = c.fetchone()
         return dict(row) if row else None
+
+
+def set_lesson_linked_reading(lesson_id: int, reading_lesson_id):
+    """设置/清除词语课文关联的阅读理解课文。reading_lesson_id 传 None 表示解除关联。"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        c.execute(
+            "UPDATE lessons SET linked_reading_id = ?, updated_at = ? WHERE lesson_id = ?",
+            (reading_lesson_id, datetime.now().isoformat(), lesson_id)
+        )
+
+
+def get_lesson_linked_reading(lesson_id: int):
+    """取词语课文关联的阅读理解课文 id；未关联或关联的阅读课文已删除则返回 None。"""
+    with get_conn() as conn:
+        c = conn.cursor()
+        row = c.execute(
+            "SELECT linked_reading_id FROM lessons WHERE lesson_id = ?", (lesson_id,)
+        ).fetchone()
+        if not row or row["linked_reading_id"] is None:
+            return None
+        rid = row["linked_reading_id"]
+        # 校验关联的阅读课文还在（老师可能删过），避免跳转到不存在的课文
+        exists = c.execute(
+            "SELECT 1 FROM reading_lessons WHERE id = ?", (rid,)
+        ).fetchone()
+        return rid if exists else None
 
 
 # ==================== 题库相关 ====================
