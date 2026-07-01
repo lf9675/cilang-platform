@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>词语·精读闯关</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+:root{
+  --deep:#0A2233; --mid:#1E6E93; --accent:#E8C36A; --accentL:#F5DE9A;
+  --wave:#4AA3C9; --seal:#C0392B; --paper:#F3F0E4; --ok:#2ECC9E;
+}
+*{box-sizing:border-box;}
+body{margin:0; min-height:100vh;
+  background:radial-gradient(circle at 18% 0%, rgba(74,163,201,.16), transparent 55%),radial-gradient(circle at 88% 100%, rgba(232,195,106,.14), transparent 50%),#071620;
+  font-family:'Noto Sans SC',sans-serif; color:#E8F0F2; display:flex; justify-content:center; padding:18px 12px 50px;}
+.app{width:100%; max-width:410px;}
+.tag{font-size:11px; color:var(--accent); background:rgba(232,195,106,.12); border:1px solid rgba(232,195,106,.3); border-radius:999px; padding:5px 12px; display:inline-block; margin-bottom:12px;}
+.screen{display:none;} .screen.active{display:block; animation:fadeIn .35s ease;}
+@keyframes fadeIn{from{opacity:0; transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.hero{position:relative; border-radius:20px; overflow:hidden; padding:28px 22px 22px;
+  background:linear-gradient(135deg, rgba(255,255,255,.10) 0%, transparent 40%), linear-gradient(160deg, var(--mid), var(--deep));
+  border:1.5px solid rgba(232,195,106,.35); clip-path:polygon(0 0,100% 0,100% 90%,80% 100%,55% 91%,30% 100%,8% 92%,0 100%); margin-bottom:16px;}
+.hero-seal{width:52px;height:52px;border-radius:14px;margin:0 auto 10px;background:linear-gradient(135deg,var(--wave),var(--mid));display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 14px rgba(74,163,201,.4);}
+.hero-title{font-size:20px; font-weight:900; text-align:center; color:var(--accentL); margin-bottom:4px;}
+.hero-sub{font-family:'Space Grotesk',sans-serif; font-size:11px; letter-spacing:1px; text-transform:uppercase; text-align:center; opacity:.7;}
+.hero-desc{margin-top:12px; font-size:14px; line-height:1.7; background:rgba(255,255,255,.06); border-radius:12px; padding:12px 14px;}
+.hero-desc b{color:var(--accentL);}
+.btn{width:100%; padding:14px; border:none; border-radius:14px; font-size:15px; font-weight:700; font-family:'Noto Sans SC',sans-serif; cursor:pointer; margin-top:12px; transition:transform .15s, box-shadow .15s;}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accentL)); color:#33280A; box-shadow:0 6px 18px rgba(232,195,106,.3);}
+.btn-ghost{background:transparent; color:var(--accentL); border:1.5px solid rgba(232,195,106,.4);}
+@media(hover:hover){.btn-primary:hover{transform:translateY(-2px);}.btn-ghost:hover{background:rgba(232,195,106,.1);}}
+.btn:active{transform:translateY(1px);} .hidden{display:none!important;}
+.progress-dots{display:flex; gap:7px; justify-content:center; margin-bottom:14px;}
+.dot{width:9px; height:9px; border-radius:50%; background:rgba(232,195,106,.2); transition:all .25s;}
+.dot.current{background:var(--accent); width:22px; border-radius:6px;} .dot.done{background:var(--wave);}
+.chunk-label{font-size:13px; font-weight:700; color:var(--accentL); margin-bottom:10px; display:flex; align-items:center; gap:6px;}
+.story-card{background:var(--paper); color:#22282C; border-radius:16px; padding:20px 18px; font-size:16px; line-height:2.15; box-shadow:0 6px 20px rgba(0,0,0,.3);}
+.blank{display:inline-block; margin:0 2px; padding:2px 12px; border:2px dashed var(--mid); border-radius:8px; background:rgba(30,110,147,.08); color:var(--mid); font-weight:700; font-size:15px; font-family:'Noto Sans SC',sans-serif; cursor:pointer; vertical-align:middle;}
+.blank.solved{border-style:solid; background:var(--mid); border-color:var(--mid); color:var(--accentL); cursor:default; animation:pop .35s ease;}
+@keyframes pop{0%{transform:scale(.85);}60%{transform:scale(1.08);}100%{transform:scale(1);}}
+.option-panel{margin-top:14px; background:var(--deep); border:1.5px solid rgba(232,195,106,.2); border-radius:16px; padding:14px; box-shadow:0 8px 22px rgba(0,0,0,.35);}
+.panel-title{font-size:13px; font-weight:700; color:var(--accentL); margin-bottom:10px;}
+.option-row{display:flex; gap:8px; flex-wrap:wrap;}
+.option-chip{flex:1 1 auto; min-width:78px; padding:11px 8px; border-radius:10px; border:1.5px solid rgba(232,195,106,.3); background:rgba(255,255,255,.05); color:#E8F0F2; font-size:15px; font-weight:700; font-family:'Noto Sans SC',sans-serif; cursor:pointer;}
+@media(hover:hover){.option-chip:hover{border-color:var(--accent);}}
+.option-chip.correct{background:var(--ok); border-color:var(--ok); color:#04211C;}
+.option-chip.wrong{background:var(--seal); border-color:var(--seal); color:#fff; animation:shake .35s ease;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+.option-chip:disabled{cursor:default;}
+.panel-tip{margin-top:12px; font-size:13px; line-height:1.7; border-radius:10px; padding:10px 12px; display:none; white-space:pre-line;}
+.panel-tip.good{display:block; background:rgba(46,204,158,.14); color:#8FE8D6;}
+.panel-tip.warn{display:block; background:rgba(192,57,43,.18); color:#F3A79B;}
+.card-stage{perspective:1200px; margin:0 auto 8px; width:300px; height:432px;}
+.card{position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform 1s cubic-bezier(.4,.1,.2,1);}
+.card.flipped{transform:rotateY(180deg);}
+.face{position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:20px; overflow:hidden;}
+.card-back{background:repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 12px, transparent 12px 24px), linear-gradient(160deg,var(--mid),var(--deep)); border:2px solid rgba(232,195,106,.4); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;}
+.back-emblem{width:70px; height:70px; border-radius:16px; background:linear-gradient(135deg,var(--wave),var(--mid)); display:flex; align-items:center; justify-content:center; font-size:38px; box-shadow:0 0 18px rgba(74,163,201,.5);}
+.back-cn{font-size:19px; font-weight:900; color:var(--accentL); letter-spacing:2px;}
+.back-word{font-family:'Space Grotesk',sans-serif; letter-spacing:3px; font-size:12px; color:var(--accent); opacity:.8;}
+.card-front{transform:rotateY(180deg); background:linear-gradient(165deg,var(--mid),var(--deep)); border:2px solid var(--accent); padding:12px; display:flex; flex-direction:column; box-shadow:inset 0 0 30px rgba(0,0,0,.45);}
+.cf-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+.cf-name{font-size:20px; font-weight:900; color:var(--accentL); text-shadow:0 1px 4px rgba(0,0,0,.5);}
+.cf-types{display:flex; gap:5px;}
+.type-badge{font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; background:rgba(74,163,201,.22); color:#A9DCF0; border:1px solid rgba(74,163,201,.45);}
+.type-badge.genre{background:rgba(232,195,106,.18); color:var(--accentL); border-color:rgba(232,195,106,.4);}
+.art-window{position:relative; border-radius:12px; overflow:hidden; height:196px; flex-shrink:0; background:radial-gradient(circle at 50% 38%, var(--mid), var(--deep)); border:1.5px solid rgba(232,195,106,.3);}
+.art-window svg{position:absolute; inset:0; width:100%; height:100%;}
+.holo-sheen{position:absolute; inset:0; pointer-events:none; background:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.5) 47%,rgba(255,255,255,.1) 53%,transparent 68%); transform:translateX(-130%); mix-blend-mode:screen;}
+.holo-rainbow{position:absolute; inset:0; pointer-events:none; opacity:0; background:linear-gradient(115deg,#ff6b9d,#feca57,#48dbfb,#c56cf0,#54a0ff); background-size:220% 220%; mix-blend-mode:color-dodge;}
+.card.revealed .holo-sheen{animation:sweep 3s ease-in-out infinite;}
+.card.foil .holo-rainbow{opacity:.26; animation:hue 5s linear infinite;}
+@keyframes sweep{0%{transform:translateX(-130%);}55%,100%{transform:translateX(130%);}}
+@keyframes hue{0%{background-position:0% 50%;}100%{background-position:220% 50%;}}
+.rarity-gem{position:absolute; top:8px; right:8px; z-index:3; font-size:11px; font-weight:900; letter-spacing:1px; padding:4px 10px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accentL)); color:#33280A; box-shadow:0 2px 8px rgba(0,0,0,.4);}
+.cf-abilities{flex:1; padding:10px 4px 0; display:flex; flex-direction:column; gap:7px;}
+.ability{text-align:left;}
+.ab-name{font-size:13px; font-weight:900; color:var(--accentL); display:flex; align-items:center; gap:5px;}
+.ab-desc{font-size:11.5px; line-height:1.5; color:#C5D6DD; margin-top:2px;}
+.cf-footer{display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(232,195,106,.2); padding-top:8px; margin-top:4px;}
+.cf-proof{font-size:11px; color:#8FE8D6; font-weight:700;}
+.cf-num{font-family:'Space Grotesk',sans-serif; font-size:13px; color:var(--accentL); font-weight:700;}
+.finish-banner{height:0; overflow:hidden; opacity:0; text-align:center; font-size:16px; font-weight:900; letter-spacing:2px; color:var(--accentL); margin-top:6px; transition:all .5s ease .6s;}
+.finish-banner.show{height:auto; opacity:1;}
+.note{margin-top:14px; font-size:12.5px; color:#9FB4BC; text-align:center; line-height:1.7;}
+.fail-box{text-align:center; padding:30px 20px; background:rgba(192,57,43,.1); border:1.5px solid rgba(192,57,43,.35); border-radius:18px;}
+.fail-emoji{font-size:40px;} .fail-title{font-size:18px; font-weight:900; color:#F3A79B; margin:10px 0 6px;}
+.fail-desc{font-size:14px; line-height:1.7; color:#E8C7C1;}
+@media(prefers-reduced-motion:reduce){.card,.holo-sheen,.holo-rainbow{animation:none!important; transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="tag" id="tag">🧩 词语·精读闯关（第四关）</div>
+
+  <div id="screen-intro" class="screen active">
+    <div class="hero">
+      <div class="hero-seal" id="heroSeal">📖</div>
+      <div class="hero-title" id="heroTitle">精读闯关</div>
+      <div class="hero-sub" id="heroSub"></div>
+      <div class="hero-desc" id="heroDesc"></div>
+    </div>
+    <button class="btn btn-primary" id="startBtn">▶ 开始阅读</button>
+  </div>
+
+  <div id="screen-story" class="screen">
+    <div class="progress-dots" id="dots"></div>
+    <div class="chunk-label" id="chunkLabel"></div>
+    <div class="story-card" id="storyText"></div>
+    <div class="option-panel hidden" id="optionPanel"></div>
+    <button class="btn btn-primary hidden" id="continueBtn">继续 →</button>
+  </div>
+
+  <div id="screen-card" class="screen">
+    <div class="card-stage">
+      <div class="card" id="card">
+        <div class="face card-back">
+          <div class="back-emblem" id="backEmblem">📖</div>
+          <div class="back-cn">词灵图鉴</div>
+          <div class="back-word">CLEVER · WORD SPIRITS</div>
+        </div>
+        <div class="face card-front">
+          <div class="rarity-gem" id="rarityGem">✦ 闪光</div>
+          <div class="cf-header">
+            <div class="cf-name" id="cardName"></div>
+            <div class="cf-types" id="cardTypes"></div>
+          </div>
+          <div class="art-window">
+            <div class="holo-rainbow"></div>
+            <div id="creatureHolder" style="position:absolute;inset:0;"></div>
+            <div class="holo-sheen"></div>
+          </div>
+          <div class="cf-abilities">
+            <div id="cardAbilities"></div>
+            <div class="cf-footer">
+              <span class="cf-proof" id="cardProof"></span>
+              <span class="cf-num" id="cardNum"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="finish-banner" id="finishBanner"></div>
+    <button class="btn btn-primary" id="openBtn">👆 点击开卡</button>
+    <div class="note hidden" id="cardNote">✅ 这张卡已收入你的图鉴 · 回主页可查看收藏</div>
+    <button class="btn btn-ghost hidden" id="retryBtn">🔄 重新挑战（冲晶彩卡）</button>
+  </div>
+
+  <div id="screen-fail" class="screen">
+    <div class="fail-box">
+      <div class="fail-emoji">🔁</div>
+      <div class="fail-title">错得有点多，再来一次！</div>
+      <div class="fail-desc" id="failDesc">这一关要少错一些才能拿到精灵卡哦。<br>看清每个词的提示，再挑战一次吧！</div>
+    </div>
+    <button class="btn btn-primary" id="failRetryBtn">🔄 再挑战一次</button>
+  </div>
+</div>
+
+<script>
+// ===== 平台注入点（沿用阅读模块 4_课文理解.py 的两个占位符）=====
+const READING_CTX = __READING_CONTEXT__;   // 学生/会话：session_token, class_name, student_id, student_name, reading_lesson_id
+const READING_DATA = __LESSON_DATA__;      // 整份精读信封 JSON（lesson_meta + reading_game）
+// ==============================================================
+
+const META = READING_DATA.lesson_meta || {};
+const RG = READING_DATA.reading_game || {};
+const CHUNKS = RG.chunks || [];
+const CARD = RG.card || {};
+const CRE = CARD.creature || {};
+
+// ---- 主题色：由精灵颜色驱动 ----
+function hexShade(hex, p){ // p>0 变亮, p<0 变暗
+  const n=parseInt(hex.replace('#',''),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  const t=p<0?0:255, a=Math.abs(p);
+  r=Math.round((t-r)*a+r); g=Math.round((t-g)*a+g); b=Math.round((t-b)*a+b);
+  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+(function applyTheme(){
+  const body = CRE.body || '#1E6E93', accent = CRE.accent || '#E8C36A';
+  const rs = document.documentElement.style;
+  rs.setProperty('--mid', body);
+  rs.setProperty('--deep', hexShade(body,-0.55));
+  rs.setProperty('--wave', hexShade(body,0.22));
+  rs.setProperty('--accent', accent);
+  rs.setProperty('--accentL', hexShade(accent,0.35));
+})();
+
+// ---- 首页文案 ----
+const blanks = CHUNKS.flatMap(c=>c.segments.filter(s=>s.w!==undefined));
+document.getElementById('heroSeal').textContent = (CHUNKS[0] && CHUNKS[0].icon) || '📖';
+document.getElementById('backEmblem').textContent = (CHUNKS[0] && CHUNKS[0].icon) || '📖';
+document.getElementById('heroTitle').textContent = '《'+(META.title_cn||'')+'》精读闯关';
+document.getElementById('heroSub').textContent = [META.grade,META.unit,META.lesson_no].filter(Boolean).join(' · ');
+document.getElementById('heroDesc').innerHTML = '把这一课的 <b>'+blanks.length+' 个词</b> 放回故事里，全部选对就能解锁专属精灵卡 ✨';
+
+// ---- 参数化精灵 SVG ----
+function crestSVG(kind){
+  switch(kind){
+    case 'glass': return `
+      <path d="M130 8 L146 52 L114 52 Z" fill="#EAFBFF" stroke="var(--accent)" stroke-width="2"/>
+      <path d="M104 26 L122 54 L92 50 Z" fill="#EAFBFF" stroke="var(--accent)" stroke-width="1.5"/>
+      <path d="M156 26 L138 54 L168 50 Z" fill="#EAFBFF" stroke="var(--accent)" stroke-width="1.5"/>
+      <path d="M130 12 C130 2 138 -2 142 4 C146 10 138 16 130 12 Z" fill="#5FD08A"/>`;
+    case 'brush': return `
+      <rect x="126" y="6" width="8" height="30" rx="3" fill="#7A5A38" transform="rotate(-14 130 20)"/>
+      <path d="M122 30 C120 46 126 56 130 58 C134 56 140 46 138 30 C134 40 126 40 122 30 Z" fill="#1A1D26" transform="rotate(-14 130 42)"/>`;
+    case 'boat': return `
+      <path d="M112 40 L148 40 L142 50 L118 50 Z" fill="var(--accent)"/>
+      <line x1="130" y1="16" x2="130" y2="40" stroke="var(--accent)" stroke-width="2.5"/>
+      <path d="M130 18 L146 34 L130 34 Z" fill="var(--accentL)"/>`;
+    default: return '';
+  }
+}
+function emblemSVG(kind){
+  switch(kind){
+    case 'gem': return `
+      <path d="M130 150 L145 166 L130 188 L115 166 Z" fill="#F4A340" stroke="#FFF3C4" stroke-width="1.5"/>
+      <path d="M130 150 L145 166 L130 166 Z" fill="#FFF3C4" opacity="0.6"/>`;
+    case 'seal': return `
+      <rect x="112" y="150" width="36" height="36" rx="6" fill="#D4342A" stroke="var(--accentL)" stroke-width="1.5"/>
+      <text x="130" y="176" font-family="'Noto Sans SC',sans-serif" font-size="24" font-weight="900" fill="#FDF6E6" text-anchor="middle">准</text>`;
+    case 'compass': return `
+      <circle cx="130" cy="164" r="22" fill="rgba(0,0,0,.35)" stroke="var(--accent)" stroke-width="1.5"/>
+      <path d="M130 146 L134 162 L130 178 L126 162 Z" fill="var(--accentL)"/>
+      <path d="M108 164 L126 160 L148 164 L126 168 Z" fill="var(--accentL)"/>
+      <path d="M130 146 L133 161 L130 164 Z" fill="#C0392B"/>
+      <circle cx="130" cy="164" r="3.5" fill="var(--accentL)"/>`;
+    default: return '';
+  }
+}
+function buildCreature(){
+  const body = CRE.body || '#1E6E93';
+  const bodyPath = "M130 48 C174 48 198 92 198 132 C198 176 170 198 130 198 C90 198 62 176 62 132 C62 92 86 48 130 48 Z";
+  return `<svg viewBox="0 0 260 220" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="130" cy="196" rx="78" ry="15" fill="rgba(0,0,0,.4)"/>
+    <ellipse cx="130" cy="193" rx="60" ry="10" fill="none" stroke="var(--accent)" stroke-width="2.5" opacity="0.5"/>
+    ${crestSVG(CRE.crest)}
+    <path d="${bodyPath}" fill="${body}"/>
+    <path d="${bodyPath}" fill="rgba(255,255,255,.10)" transform="translate(0,-6) scale(1)" style="transform-origin:130px 40px" opacity="0.0"/>
+    <ellipse cx="130" cy="118" rx="52" ry="60" fill="rgba(255,255,255,.18)"/>
+    <ellipse cx="130" cy="176" rx="60" ry="42" fill="rgba(0,0,0,.14)"/>
+    <path d="${bodyPath}" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2"/>
+    <ellipse cx="109" cy="118" rx="12" ry="15" fill="#0A1620"/>
+    <ellipse cx="151" cy="118" rx="12" ry="15" fill="#0A1620"/>
+    <circle cx="113" cy="112" r="4.2" fill="#EAFBFF"/><circle cx="155" cy="112" r="4.2" fill="#EAFBFF"/>
+    <circle cx="106" cy="123" r="1.8" fill="var(--accentL)"/><circle cx="148" cy="123" r="1.8" fill="var(--accentL)"/>
+    <ellipse cx="92" cy="138" rx="7" ry="4.5" fill="#FF9EB5" opacity="0.4"/>
+    <ellipse cx="168" cy="138" rx="7" ry="4.5" fill="#FF9EB5" opacity="0.4"/>
+    ${emblemSVG(CRE.emblem)}
+    <path d="M62 134 C50 138 46 150 52 158 C56 148 60 142 66 142 Z" fill="${body}" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>
+    <path d="M198 134 C210 138 214 150 208 158 C204 148 200 142 194 142 Z" fill="${body}" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>
+    <circle cx="44" cy="92" r="4" fill="var(--wave)" opacity="0.8"/>
+    <circle cx="214" cy="108" r="4" fill="var(--accentL)" opacity="0.7"/>
+  </svg>`;
+}
+
+// ---- 卡面填充 ----
+document.getElementById('cardName').textContent = CARD.name || '词灵';
+document.getElementById('cardTypes').innerHTML = (CARD.types||[]).map((t,i)=>`<span class="type-badge ${i===0?'genre':''}">${t}</span>`).join('');
+document.getElementById('cardAbilities').innerHTML = (CARD.abilities||[]).map(a=>`<div class="ability"><div class="ab-name">✦ ${a.n}</div><div class="ab-desc">${a.d}</div></div>`).join('');
+document.getElementById('cardProof').textContent = '✅ 全词通关 '+blanks.length+'/'+blanks.length;
+document.getElementById('cardNum').textContent = CARD.set_no || '';
+document.getElementById('creatureHolder').innerHTML = buildCreature();
+
+// ===== 诊断数据（阅读模块约定：finale 写 localStorage['cilang_reading_result_{token}']）=====
+// 每空作答（含选错）都记进 attempts[]，供 save_reading_result 做选项级诊断。
+const SESSION_TOKEN = READING_CTX.session_token || 'demo';
+const ATTEMPTS_KEY = 'cilang_jd_attempts_' + SESSION_TOKEN;
+function loadAttempts(){ try{return JSON.parse(sessionStorage.getItem(ATTEMPTS_KEY)||'[]');}catch(e){return [];} }
+function saveAttempts(a){ try{sessionStorage.setItem(ATTEMPTS_KEY,JSON.stringify(a));}catch(e){} }
+function recordAttempt(word, isCorrect, chosenIdx, correctIdx, chosenContent, correctContent, errtag){
+  const a = loadAttempts();
+  a.push({ word, is_correct:isCorrect?1:0,
+    chosen_idx:chosenIdx, correct_idx:correctIdx,
+    chosen_content:chosenContent||'', correct_content:correctContent||'',
+    errtag:errtag||'', answered_at:new Date().toISOString() });
+  saveAttempts(a);
+}
+// 提交：写进 4_课文理解.py 轮询的那个 localStorage 键（键名与 light 分支一致）
+function submitFinalData(total, firstTryCorrect, mistakes, tier, cardEarned){
+  const payload = {
+    session_token: SESSION_TOKEN,
+    class_name: READING_CTX.class_name,
+    student_id: READING_CTX.student_id,
+    student_name: READING_CTX.student_name,
+    reading_lesson_id: READING_CTX.reading_lesson_id,
+    format: 'reading_game',
+    lesson_title: META.title_cn || '',
+    total_blanks: total,
+    first_try_correct: firstTryCorrect,   // 一次答对数（正确率信号）
+    mistakes: mistakes,                   // 总错误数（决定卡等级）
+    tier: tier,                           // 'crystal' / 'foil' / 'none'
+    card_earned: cardEarned ? 1 : 0,      // 杠杆B：mistakes<4 才为 1
+    card_name: (READING_DATA.reading_game && READING_DATA.reading_game.card && READING_DATA.reading_game.card.name) || '',
+    attempts: loadAttempts()              // 选项级诊断明细
+  };
+  try{ localStorage.setItem('cilang_reading_result_'+SESSION_TOKEN, JSON.stringify(payload)); }catch(e){}
+  try{ if(window.parent!==window) window.parent.postMessage({type:'reading_game_complete', payload:payload}, '*'); }catch(e){}
+}
+
+// ===== 闯关流程 =====
+let currentChunk=0, mistakes=0, firstTryCorrect=0, answered={}, wrongOnThisBlank={};
+function switchScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+n).classList.add('active');window.scrollTo(0,0);}
+function renderDots(){document.getElementById('dots').innerHTML=CHUNKS.map((c,i)=>`<div class="dot" id="dot-${i}"></div>`).join('');}
+function updateDots(){CHUNKS.forEach((c,i)=>{const d=document.getElementById('dot-'+i);d.className='dot'+(i<currentChunk?' done':(i===currentChunk?' current':''));});}
+function renderChunk(i){
+  currentChunk=i; updateDots();
+  const chunk=CHUNKS[i];
+  document.getElementById('chunkLabel').innerHTML=`<span>${chunk.icon||''}</span> 第 ${i+1} 段 ${chunk.label?'· '+chunk.label:''}`;
+  const el=document.getElementById('storyText'); el.innerHTML='';
+  chunk.segments.forEach((seg,si)=>{
+    if(seg.w===undefined){el.appendChild(document.createTextNode(seg.text));}
+    else{const b=document.createElement('button');b.className='blank';b.id=`blank-${i}-${si}`;b.textContent='○○';b.addEventListener('click',()=>openPanel(i,si));el.appendChild(b);}
+  });
+  document.getElementById('optionPanel').classList.add('hidden');
+  document.getElementById('continueBtn').classList.add('hidden');
+}
+function openPanel(ci,si){
+  if(answered[`${ci}-${si}`])return;
+  const seg=CHUNKS[ci].segments[si];
+  const panel=document.getElementById('optionPanel'); panel.classList.remove('hidden');
+  panel.innerHTML=`<div class="panel-title">这里该填哪个词？</div><div class="option-row" id="optRow"></div><div class="panel-tip" id="panelTip"></div>`;
+  const row=document.getElementById('optRow');
+  seg.options.forEach((opt,oi)=>{const b=document.createElement('button');b.className='option-chip';b.textContent=opt;b.addEventListener('click',()=>selectOption(ci,si,oi,b));row.appendChild(b);});
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function selectOption(ci,si,oi,btn){
+  const seg=CHUNKS[ci].segments[si];
+  const key=`${ci}-${si}`;
+  const tip=document.getElementById('panelTip');
+  const correctIdx=seg.correct, correctContent=seg.options[correctIdx], chosenContent=seg.options[oi];
+  const isCorrect = oi===correctIdx;
+  recordAttempt(seg.w, isCorrect, oi, correctIdx, chosenContent, correctContent, seg.errtag);
+  if(isCorrect){
+    if(!wrongOnThisBlank[key]) firstTryCorrect++;
+    answered[key]=true;
+    const bl=document.getElementById(`blank-${ci}-${si}`); bl.textContent=`✔ ${seg.w}`; bl.classList.add('solved');
+    tip.textContent=seg.tip||''; tip.className='panel-tip good';
+    document.querySelectorAll('.option-chip').forEach(b=>b.disabled=true); btn.classList.add('correct');
+    setTimeout(()=>{document.getElementById('optionPanel').classList.add('hidden'); checkChunkComplete(ci);},900);
+  }else{
+    mistakes++; wrongOnThisBlank[key]=true;
+    btn.classList.add('wrong'); setTimeout(()=>btn.classList.remove('wrong'),400);
+    tip.textContent=seg.tip||''; tip.className='panel-tip warn';
+  }
+}
+function checkChunkComplete(ci){
+  const chunk=CHUNKS[ci]; let total=0,done=0;
+  chunk.segments.forEach((s,si)=>{if(s.w!==undefined){total++; if(answered[`${ci}-${si}`])done++;}});
+  if(done===total){
+    const btn=document.getElementById('continueBtn'); btn.classList.remove('hidden');
+    const last=ci===CHUNKS.length-1;
+    btn.textContent=last?'✨ 生成精灵卡':'继续 →';
+    btn.onclick=()=>{ last?finishReading():renderChunk(ci+1); };
+  }
+}
+function finishReading(){
+  const total = blanks.length;
+  const tier = mistakes===0 ? 'crystal' : (mistakes<=3 ? 'foil' : 'none');
+  const cardEarned = mistakes<4;   // 杠杆B
+  // 无论过没过，都提交（错得多的诊断数据反而最有价值）
+  submitFinalData(total, firstTryCorrect, mistakes, tier, cardEarned);
+  if(!cardEarned){ switchScreen('fail'); return; }
+  switchScreen('card');
+}
+document.getElementById('openBtn').addEventListener('click',()=>{
+  const card=document.getElementById('card'); card.classList.add('flipped');
+  document.getElementById('openBtn').classList.add('hidden');
+  const tier = mistakes===0 ? 'crystal' : 'foil';
+  setTimeout(()=>{
+    card.classList.add('revealed');
+    const gem=document.getElementById('rarityGem'); const banner=document.getElementById('finishBanner');
+    if(tier==='crystal'){card.classList.add('foil'); gem.textContent='◆ 晶彩'; banner.textContent='🌈 满分！开出最稀有「晶彩卡」';}
+    else{card.classList.add('foil'); gem.textContent='✦ 闪光'; banner.textContent='✨ 你开出了「闪光卡」';}
+    banner.classList.add('show');
+    document.getElementById('cardNote').classList.remove('hidden');
+    document.getElementById('retryBtn').classList.remove('hidden');
+  },1000);
+});
+function resetRun(){
+  mistakes=0; firstTryCorrect=0; answered={}; wrongOnThisBlank={};
+  saveAttempts([]); // 重挑清空本次作答缓存
+  document.getElementById('card').className='card';
+  document.getElementById('openBtn').classList.remove('hidden');
+  document.getElementById('cardNote').classList.add('hidden');
+  document.getElementById('retryBtn').classList.add('hidden');
+  document.getElementById('finishBanner').className='finish-banner';
+  switchScreen('story'); renderDots(); renderChunk(0);
+}
+document.getElementById('retryBtn').addEventListener('click',resetRun);
+document.getElementById('failRetryBtn').addEventListener('click',resetRun);
+document.getElementById('startBtn').addEventListener('click',()=>{switchScreen('story');renderDots();renderChunk(0);});
+</script>
+</body>
+</html>
