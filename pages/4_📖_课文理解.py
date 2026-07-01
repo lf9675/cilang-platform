@@ -122,7 +122,12 @@ def render_detective_quiz():
         return
 
     # ===== 数据完整性守卫 =====
-    missing = [k for k in ('story', 'terms', 'quiz', 'lesson_meta') if k not in lesson_data]
+    _fmt = str(lesson_data.get('lesson_meta', {}).get('format', '')).lower()
+    if _fmt == 'reading_game':
+        # 精读闯关：用 reading_game 字段，不需要 story/terms/quiz
+        missing = [k for k in ('reading_game', 'lesson_meta') if k not in lesson_data]
+    else:
+        missing = [k for k in ('story', 'terms', 'quiz', 'lesson_meta') if k not in lesson_data]
     if missing:
         if st.button("⬅ 返回选课"):
             st.session_state.selected_reading_lesson = None
@@ -139,6 +144,7 @@ def render_detective_quiz():
     # ===== v8 新增：按 lesson_meta.format 选择引擎模板 =====
     # 'light' → 轻交互模板；其余（含旧课文，无 format 字段）→ 原侦探模板，行为完全不变。
     is_light = str(meta.get('format', '')).lower() == 'light'
+    is_reading_game = str(meta.get('format', '')).lower() == 'reading_game'
 
     templates_dir = Path(__file__).parent.parent / "templates"
 
@@ -153,6 +159,92 @@ def render_detective_quiz():
             f"### {meta.get('grade','')} · {meta.get('unit','')} · "
             f"{meta.get('lesson_no','')} · 《{meta.get('title_cn','')}》"
         )
+
+    # ========== 分支 0：精读闯关（词语·精读，第四关）==========
+    if is_reading_game:
+        session_token = st.session_state.reading_session_token or str(uuid.uuid4())
+        st.session_state.reading_session_token = session_token
+
+        template_path = templates_dir / "reading_game_template.html"
+        html_content = template_path.read_text(encoding="utf-8")
+
+        reading_ctx = {
+            "session_token": session_token,
+            "class_name": info["class_name"],
+            "student_id": info["student_id"],
+            "student_name": info["student_name"],
+            "reading_lesson_id": lesson_id,
+        }
+        # 与 light 分支同样的两个占位符
+        html_content = html_content.replace(
+            '__LESSON_DATA__', json.dumps(lesson_data, ensure_ascii=False)
+        )
+        html_content = html_content.replace(
+            '__READING_CONTEXT__', json.dumps(reading_ctx, ensure_ascii=False)
+        )
+        components.html(html_content, height=900, scrolling=True)
+
+        # ===== 自动提交：与 light 分支完全相同（模板写同一个 localStorage 键）=====
+        result_json = st.text_area(
+            "reading_result_payload",
+            value="",
+            key="reading_result_payload",
+            height=68,
+            label_visibility="collapsed",
+        )
+        st.markdown(
+            "<style>div[data-testid='stTextArea']:has(textarea[aria-label='reading_result_payload'])"
+            "{position:absolute;left:-99999px;height:0;overflow:hidden;}</style>",
+            unsafe_allow_html=True,
+        )
+        components.html(f"""
+        <script>
+        (function() {{
+            const key = 'cilang_reading_result_{session_token}';
+            function tryFill() {{
+                try {{
+                    const data = localStorage.getItem(key);
+                    if (!data) return false;
+                    const doc = window.parent.document;
+                    const tas = doc.querySelectorAll('textarea');
+                    for (const ta of tas) {{
+                        if (ta.getAttribute('aria-label') === 'reading_result_payload') {{
+                            if (ta.value !== data) {{
+                                const setter = Object.getOwnPropertyDescriptor(
+                                    window.HTMLTextAreaElement.prototype, 'value').set;
+                                setter.call(ta, data);
+                                ta.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            }}
+                            return true;
+                        }}
+                    }}
+                }} catch(e) {{ console.warn(e); }}
+                return false;
+            }}
+            const iv = setInterval(() => {{ if (tryFill()) clearInterval(iv); }}, 1200);
+        }})();
+        </script>
+        """, height=0)
+
+        if result_json.strip():
+            try:
+                payload = json.loads(result_json)
+                tok = payload.get("session_token", "")
+                if (tok == session_token
+                        and payload.get("class_name") == info["class_name"]
+                        and payload.get("student_id") == info["student_id"]
+                        and tok not in st.session_state.reading_saved_tokens):
+                    ok, msg = db.save_reading_result(payload)
+                    if ok:
+                        st.session_state.reading_saved_tokens.add(tok)
+                        st.success(f"🎉 {msg} · 已自动记录给老师")
+                    else:
+                        st.warning(f"成绩记录遇到问题：{msg}")
+                elif tok in st.session_state.reading_saved_tokens:
+                    st.caption("✅ 本次成绩已记录")
+            except json.JSONDecodeError:
+                pass
+        return
 
     # ========== 分支 1：轻交互模板 ==========
     if is_light:

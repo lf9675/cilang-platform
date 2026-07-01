@@ -341,24 +341,32 @@ with tab_import:
                         "应该到「📚 题库管理」导入。\n\n"
                         "阅读理解课文必须是**字典**(以 `{` 开头),包含 story / terms / quiz 三个部分。"
                     )
-                elif 'story' not in content_dict and 'quiz' not in content_dict:
-                    st.error("❌ JSON 里没有找到 story 或 quiz 字段,无法作为阅读理解课文导入。")
+                elif ('reading_game' not in content_dict
+                        and 'story' not in content_dict and 'quiz' not in content_dict):
+                    st.error("❌ JSON 里没有找到 story / quiz / reading_game 字段,无法导入。")
                     st.info(
-                        "💡 阅读理解课文 JSON 必须包含 `story`(课文段落)和 `quiz`(闯关题目)。"
-                        "请确认你粘贴的是阅读理解课文,而不是词语闯关题库或其他内容。"
+                        "💡 阅读理解课文需含 `story`+`quiz`;精读闯关需含 `reading_game`。"
+                        "请确认粘贴的是课文/精读 JSON,而不是词语闯关题库。"
                     )
                 else:
-                    # 写入数据库
+                    # 写入数据库(整份 JSON 原样存,reading_game 也走这里)
                     db.update_reading_lesson_content(
                         lesson_id=selected_lesson_id,
                         content_json=json.dumps(content_dict, ensure_ascii=False)
                     )
 
-                    # 统计
-                    story_paragraphs = len(content_dict.get('story', {}).get('paragraphs', []))
-                    terms_count = len(content_dict.get('terms', {}))
-                    quiz = content_dict.get('quiz', [])
-                    total_q = sum(len(p.get('questions', [])) for p in quiz)
+                    # 统计(按格式分别计数)
+                    if 'reading_game' in content_dict:
+                        _chunks = content_dict['reading_game'].get('chunks', [])
+                        story_paragraphs = len(_chunks)
+                        terms_count = 0
+                        total_q = sum(1 for ch in _chunks
+                                      for seg in ch.get('segments', []) if 'w' in seg)
+                    else:
+                        story_paragraphs = len(content_dict.get('story', {}).get('paragraphs', []))
+                        terms_count = len(content_dict.get('terms', {}))
+                        quiz = content_dict.get('quiz', [])
+                        total_q = sum(len(p.get('questions', [])) for p in quiz)
 
                     st.success("✅ 导入成功!")
                     st.caption(
