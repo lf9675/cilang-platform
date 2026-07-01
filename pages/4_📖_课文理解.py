@@ -9,6 +9,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import database as db
 import json
+import uuid
 from pathlib import Path
 
 st.set_page_config(
@@ -51,6 +52,11 @@ def init_session():
         st.session_state.student_info = None
     if "selected_reading_lesson" not in st.session_state:
         st.session_state.selected_reading_lesson = None
+    if "reading_session_token" not in st.session_state:
+        st.session_state.reading_session_token = None
+    if "reading_saved_tokens" not in st.session_state:
+        # 已成功写库的 session_token 集合，防止重复写入
+        st.session_state.reading_saved_tokens = set()
 
 
 def render_login():
@@ -100,6 +106,7 @@ def render_lesson_selector():
             with col2:
                 if st.button("开始闯关", key=f"start_{lesson['id']}", type="primary", use_container_width=True):
                     st.session_state.selected_reading_lesson = lesson['id']
+                    st.session_state.reading_session_token = str(uuid.uuid4())
                     st.rerun()
 
 
@@ -149,13 +156,100 @@ def render_detective_quiz():
 
     # ========== 分支 1：轻交互模板 ==========
     if is_light:
+        session_token = st.session_state.reading_session_token or str(uuid.uuid4())
+        st.session_state.reading_session_token = session_token
+
         template_path = templates_dir / "reading_light_template.html"
         html_content = template_path.read_text(encoding="utf-8")
-        # 整份课文 JSON 一次性注入单个占位符，引擎自行解析 story/terms/quiz/finale
+
+        # 学生身份上下文（自动回传成绩用）
+        reading_ctx = {
+            "session_token": session_token,
+            "class_name": info["class_name"],
+            "student_id": info["student_id"],
+            "student_name": info["student_name"],
+            "reading_lesson_id": lesson_id,
+        }
+
+        # 整份课文 JSON + 学生上下文，各注入一个占位符
         html_content = html_content.replace(
             '__LESSON_DATA__', json.dumps(lesson_data, ensure_ascii=False)
         )
+        html_content = html_content.replace(
+            '__READING_CONTEXT__', json.dumps(reading_ctx, ensure_ascii=False)
+        )
         components.html(html_content, height=900, scrolling=True)
+
+        # ===== 自动提交：父页面轮询 localStorage，读到成绩就写库 =====
+        # 学生做完最后一关，引擎已把成绩写进 localStorage。这里用一个隐藏组件
+        # 把它读出来、填进一个 text_area，Streamlit rerun 后本页读取并写库。
+        # 学生无需点任何按钮（页面会自己刷一下，这是 Streamlit iframe 通信的固有限制）。
+        result_json = st.text_area(
+            "reading_result_payload",
+            value="",
+            key="reading_result_payload",
+            height=68,
+            label_visibility="collapsed",
+        )
+
+        # 隐藏这个中转 text_area（学生不该看到）
+        st.markdown(
+            "<style>div[data-testid='stTextArea']:has(textarea[aria-label='reading_result_payload'])"
+            "{position:absolute;left:-99999px;height:0;overflow:hidden;}</style>",
+            unsafe_allow_html=True,
+        )
+
+        # 轮询 JS：把 localStorage 的成绩写进上面的 text_area 并触发 input 事件
+        components.html(f"""
+        <script>
+        (function() {{
+            const key = 'cilang_reading_result_{session_token}';
+            function tryFill() {{
+                try {{
+                    const data = localStorage.getItem(key);
+                    if (!data) return false;
+                    const doc = window.parent.document;
+                    const tas = doc.querySelectorAll('textarea');
+                    for (const ta of tas) {{
+                        if (ta.getAttribute('aria-label') === 'reading_result_payload') {{
+                            if (ta.value !== data) {{
+                                const setter = Object.getOwnPropertyDescriptor(
+                                    window.HTMLTextAreaElement.prototype, 'value').set;
+                                setter.call(ta, data);
+                                ta.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            }}
+                            return true;
+                        }}
+                    }}
+                }} catch(e) {{ console.warn(e); }}
+                return false;
+            }}
+            const iv = setInterval(() => {{ if (tryFill()) clearInterval(iv); }}, 1200);
+        }})();
+        </script>
+        """, height=0)
+
+        # 读到成绩就写库（幂等：同一 session_token 只写一次）
+        if result_json.strip():
+            try:
+                payload = json.loads(result_json)
+                tok = payload.get("session_token", "")
+                # 安全校验：token + 学生信息要对得上
+                if (tok == session_token
+                        and payload.get("class_name") == info["class_name"]
+                        and payload.get("student_id") == info["student_id"]
+                        and tok not in st.session_state.reading_saved_tokens):
+                    ok, msg = db.save_reading_result(payload)
+                    if ok:
+                        st.session_state.reading_saved_tokens.add(tok)
+                        st.success(f"🎉 {msg} · 已自动记录给老师")
+                    else:
+                        st.warning(f"成绩记录遇到问题：{msg}")
+                elif tok in st.session_state.reading_saved_tokens:
+                    st.caption("✅ 本次成绩已记录")
+            except json.JSONDecodeError:
+                pass  # 数据还没填好，静默等下一轮
+
         # 轻交互模板自带计分与「再挑战」，不需要侦探完成码流程
         return
 
