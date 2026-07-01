@@ -77,12 +77,13 @@ if not classes:
     st.stop()
 
 # 标签页（v7 新增第 5 个 tab）
-tab0, tab1, tab2, tab3, tab4 = st.tabs([
+tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🎯 本周整体",
     "📈 学生总表",
     "📊 班级错词统计",
     "📋 详细答题记录",
-    "🕵️ 核心课文进度"
+    "🕵️ 核心课文进度",
+    "📖 阅读理解"
 ])
 
 with tab0:
@@ -390,3 +391,109 @@ with tab4:
             file_name=f"侦探闯关进度_{pd.Timestamp.now().strftime('%Y%m%d')}.csv",
             mime="text/csv"
         )
+
+
+with tab5:
+    st.markdown("### 📖 阅读理解 · 精读闯关")
+    st.caption("学生做完轻交互精读闯关后，成绩自动进这里。看完成情况，也看全班在哪道题栽了。")
+
+    # 取所有阅读理解课文，构造选择器
+    reading_lessons = db.list_reading_lessons(only_published=False)
+    if not reading_lessons:
+        st.info("还没有任何阅读理解课文。请到「📖 阅读理解管理」创建并发布。")
+    else:
+        r_lesson_options = ["全部"]
+        r_lesson_id_map = {}
+        for r in reading_lessons:
+            label = f"{r.get('grade','')} · {r.get('unit','')} · {r.get('lesson_no','')} 《{r['title_cn']}》"
+            r_lesson_options.append(label)
+            r_lesson_id_map[label] = r["id"]
+
+        colr1, colr2 = st.columns(2)
+        with colr1:
+            r_class_filter = st.selectbox("选择班级", ["全部"] + classes, key="t5_class")
+        with colr2:
+            r_lesson_filter = st.selectbox("选择课文", r_lesson_options, key="t5_lesson")
+
+        sel_class = r_class_filter if r_class_filter != "全部" else None
+        sel_rid = r_lesson_id_map.get(r_lesson_filter) if r_lesson_filter != "全部" else None
+
+        # ===== 区块 1：完成情况汇总 =====
+        st.markdown("---")
+        st.markdown("#### 📈 完成情况")
+
+        r_summary = db.get_reading_session_summary(
+            teacher_id=teacher["teacher_id"],
+            class_name=sel_class,
+            reading_lesson_id=sel_rid
+        )
+
+        if not r_summary:
+            st.info("这个筛选下还没有学生完成阅读理解。")
+        else:
+            rdf = pd.DataFrame(r_summary)
+
+            m1, m2, m3 = st.columns(3)
+            m1.metric("完成次数", len(rdf))
+            m2.metric("覆盖学生数", rdf[["class_name", "student_id"]].drop_duplicates().shape[0])
+            m3.metric("平均正确率", f"{rdf['accuracy'].mean():.1f}%")
+
+            rdf_display = rdf[["class_name", "student_id", "student_name", "lesson_label",
+                               "total_graded", "correct_count", "accuracy", "completed_at"]].copy()
+            rdf_display.columns = ["班级", "学号", "姓名", "课文", "总题数", "答对", "正确率%", "完成时间"]
+            st.dataframe(rdf_display, use_container_width=True, hide_index=True)
+
+            r_csv = rdf_display.to_csv(index=False).encode("utf-8-sig")
+            st.download_button(
+                "📥 下载完成情况 CSV", r_csv,
+                file_name=f"阅读理解完成_{r_class_filter}.csv", mime="text/csv",
+                key="t5_dl_summary"
+            )
+
+        # ===== 区块 2：选项级诊断（护城河：哪道题栽了、错选了哪个干扰项）=====
+        st.markdown("---")
+        st.markdown("#### 🔍 哪道题全班栽了？错在哪个干扰项？")
+        st.caption("每行一道题，按错误率排序。「最常错选」就是全班集体踩的那个干扰项——配合题目解析，就知道是哪种误读。")
+
+        if sel_rid is None:
+            st.info("👆 请在上方**选一篇具体课文**，才能看这篇的逐题诊断（选「全部」不做逐题分析）。")
+        else:
+            q_stats = db.get_reading_question_error_stats(
+                teacher_id=teacher["teacher_id"],
+                reading_lesson_id=sel_rid
+            )
+            if not q_stats:
+                st.info("这篇课文还没有逐题答题数据。")
+            else:
+                qdf = pd.DataFrame(q_stats)
+
+                # 高亮错得最多的题（错误率≥50%）
+                hot = qdf[qdf["error_rate"] >= 50]
+                if not hot.empty:
+                    st.markdown("**🔴 错误率 ≥ 50% 的题（建议课堂重点讲）：**")
+                    for _, row in hot.iterrows():
+                        st.markdown(
+                            f"🔴 **{row['qid']}**（{row['qtype']}）· 错误率 **{row['error_rate']}%** "
+                            f"· 考点：{row['tag'] or '—'}"
+                        )
+                        if row["top_wrong_answer"]:
+                            st.caption(
+                                f"　　全班最常错选：「{row['top_wrong_answer']}」"
+                                f"（{row['top_wrong_count']} 人）　正确：「{row['correct_content']}」"
+                            )
+                    st.markdown("---")
+
+                st.markdown("**完整逐题诊断表：**")
+                qdf_display = qdf[["qid", "qtype", "tag", "total_attempts", "wrong_attempts",
+                                   "error_rate", "top_wrong_answer", "top_wrong_count",
+                                   "correct_content"]].copy()
+                qdf_display.columns = ["题号", "题型", "考点", "作答人次", "答错人次",
+                                       "错误率%", "最常错选", "错选人数", "正确答案"]
+                st.dataframe(qdf_display, use_container_width=True, hide_index=True)
+
+                q_csv = qdf_display.to_csv(index=False).encode("utf-8-sig")
+                st.download_button(
+                    "📥 下载逐题诊断 CSV", q_csv,
+                    file_name=f"阅读理解逐题诊断_{r_lesson_filter}.csv", mime="text/csv",
+                    key="t5_dl_diag"
+                )
