@@ -77,12 +77,11 @@ if not classes:
     st.stop()
 
 # 标签页（v7 新增第 5 个 tab）
-tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab0, tab1, tab2, tab3, tab5 = st.tabs([
     "🎯 本周整体",
     "📈 学生总表",
     "📊 班级错词统计",
     "📋 详细答题记录",
-    "🕵️ 核心课文进度",
     "📖 阅读理解"
 ])
 
@@ -299,98 +298,6 @@ with tab3:
                                        "对错", "学生选了", "正确答案", "时间"]
                 st.dataframe(df_display, use_container_width=True, hide_index=True)
                 st.caption(f"显示最近 {len(df_display)} 条记录")
-
-
-# ==================== Tab 4: 核心课文进度（v7 新增）====================
-with tab4:
-    st.markdown("### 🕵️ 核心课文侦探闯关 · 班级进度")
-    st.caption("通过完成码 + 自评 + 一句话总结，了解学生对核心课文的深度理解")
-
-    try:
-        records = db.get_class_detective_records(teacher["teacher_id"])
-    except Exception as e:
-        st.error(f"读取数据失败：{e}")
-        records = []
-
-    if not records:
-        st.info("📭 还没有任何学生完成核心课文侦探闯关。")
-        st.caption("学生完成《恐怖事件》侦探闯关后，会在这里显示进度。")
-    else:
-        df_det = pd.DataFrame(records)
-
-        # 筛选器
-        fcol1, fcol2 = st.columns(2)
-        with fcol1:
-            det_classes = sorted(df_det["class_name"].unique().tolist())
-            sel_class_det = st.selectbox("筛选班级", ["全部"] + det_classes, key="t4_class")
-            if sel_class_det != "全部":
-                df_det = df_det[df_det["class_name"] == sel_class_det]
-        with fcol2:
-            det_lessons = sorted(df_det["lesson_title"].unique().tolist())
-            sel_lesson_det = st.selectbox("筛选课文", ["全部"] + det_lessons, key="t4_lesson")
-            if sel_lesson_det != "全部":
-                df_det = df_det[df_det["lesson_title"] == sel_lesson_det]
-
-        # 概览
-        st.markdown("---")
-        ccol1, ccol2, ccol3, ccol4 = st.columns(4)
-        with ccol1:
-            st.metric("✅ 已完成", f"{len(df_det)} 人次")
-        with ccol2:
-            st.metric("🏅 平均徽章", f"{df_det['badges_earned'].mean():.1f}/5")
-        with ccol3:
-            st.metric("🎯 平均自评", f"{df_det['self_rating'].mean():.1f}/5")
-        with ccol4:
-            low_count = int((df_det['self_rating'] <= 2).sum())
-            st.metric("⚠️ 自评≤2", low_count, help="需重点辅导的学生数")
-
-        # 需要辅导的学生
-        if low_count > 0:
-            st.markdown("---")
-            with st.container(border=True):
-                st.markdown("#### ⚠️ 需重点辅导的学生（自评 ≤ 2）")
-                danger = df_det[df_det['self_rating'] <= 2][[
-                    "class_name", "student_id", "student_name",
-                    "badges_earned", "self_rating", "one_line_summary"
-                ]].copy()
-                danger.columns = ["班级", "学号", "姓名", "徽章", "自评", "一句话总结"]
-                st.dataframe(danger, hide_index=True, use_container_width=True)
-
-        # 徽章不足
-        low_badge = df_det[df_det['badges_earned'] < 3]
-        if len(low_badge) > 0:
-            st.markdown("---")
-            with st.container(border=True):
-                st.markdown("#### 📍 徽章不足 3 的学生（可能没认真做）")
-                lb = low_badge[["class_name", "student_id", "student_name", "badges_earned", "self_rating"]].copy()
-                lb.columns = ["班级", "学号", "姓名", "徽章", "自评"]
-                st.dataframe(lb, hide_index=True, use_container_width=True)
-
-        # 完整表
-        st.markdown("---")
-        st.markdown("#### 📋 全部数据")
-        display_df = df_det[[
-            "class_name", "student_id", "student_name", "lesson_title",
-            "badges_earned", "self_rating", "one_line_summary", "submitted_at"
-        ]].copy()
-        display_df.columns = ["班级", "学号", "姓名", "课文", "徽章", "自评", "一句话总结", "提交时间"]
-        st.dataframe(display_df, hide_index=True, use_container_width=True)
-
-        # 一句话总结合集
-        with st.expander("📖 学生总结合集（抽样检查是否真懂）", expanded=False):
-            for _, row in df_det.iterrows():
-                st.markdown(f"**{row['student_id']} · {row['student_name']}**（{row['class_name']} · 徽章 {row['badges_earned']}/5 · 自评 {row['self_rating']}/5）")
-                st.caption(f"💬 {row['one_line_summary']}")
-                st.divider()
-
-        # 导出
-        csv = display_df.to_csv(index=False).encode("utf-8-sig")
-        st.download_button(
-            "📥 下载侦探闯关 CSV",
-            data=csv,
-            file_name=f"侦探闯关进度_{pd.Timestamp.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
 
 
 with tab5:

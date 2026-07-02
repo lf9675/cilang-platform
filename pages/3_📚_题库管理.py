@@ -224,8 +224,7 @@ with tab2:
         with col1:
             grade = st.selectbox("年级", ["Sec 1", "Sec 2"])
         with col2:
-            unit_options = ["单元一", "单元二", "单元三", "单元四", "单元五", "单元六", "单元七", "单元八",
-                            "单元九", "单元十", "单元十一", "单元十二"]
+            unit_options = ["单元一", "单元二", "单元三", "单元四", "单元五", "单元六"]
             unit = st.selectbox("单元", unit_options)
 
         col3, col4 = st.columns(2)

@@ -191,11 +191,11 @@ with tab_create:
         col1, col2 = st.columns(2)
         with col1:
             title_cn = st.text_input("课文中文标题 *", placeholder="例如:最美的姿势")
-            grade = st.text_input("年级", placeholder="例如:Sec 2")
-            unit = st.text_input("单元", placeholder="例如:单元四")
+            grade = st.selectbox("年级", ["Sec 1", "Sec 2"])
+            unit = st.selectbox("单元", ["单元一", "单元二", "单元三", "单元四", "单元五", "单元六"])
         with col2:
             title_en = st.text_input("英文标题", placeholder="例如:The Most Beautiful Pose")
-            lesson_no = st.text_input("第几课", placeholder="例如:第三课")
+            lesson_no = st.selectbox("第几课", ["第一课", "第二课", "第三课", "第四课"])
             lesson_type = st.selectbox(
                 "文体",
                 options=["自动识别", "记叙文", "说明文", "议论文", "散文"],
@@ -362,17 +362,19 @@ with tab_import:
                         terms_count = 0
                         total_q = sum(1 for ch in _chunks
                                       for seg in ch.get('segments', []) if 'w' in seg)
+                        phase_count = len(_chunks)
                     else:
                         story_paragraphs = len(content_dict.get('story', {}).get('paragraphs', []))
                         terms_count = len(content_dict.get('terms', {}))
                         quiz = content_dict.get('quiz', [])
                         total_q = sum(len(p.get('questions', [])) for p in quiz)
+                        phase_count = len(quiz)
 
                     st.success("✅ 导入成功!")
                     st.caption(
                         f"课文段落:{story_paragraphs} 段 | "
                         f"术语词典:{terms_count} 个 | "
-                        f"题目:{total_q} 道(分 {len(quiz)} 关)"
+                        f"题目:{total_q} 道(分 {phase_count} 关)"
                     )
                     st.balloons()
 
