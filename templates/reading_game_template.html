@@ -271,29 +271,31 @@ function loadAttempts(){ try{return JSON.parse(sessionStorage.getItem(ATTEMPTS_K
 function saveAttempts(a){ try{sessionStorage.setItem(ATTEMPTS_KEY,JSON.stringify(a));}catch(e){} }
 function recordAttempt(word, isCorrect, chosenIdx, correctIdx, chosenContent, correctContent, errtag){
   const a = loadAttempts();
-  a.push({ word, is_correct:isCorrect?1:0,
-    chosen_idx:chosenIdx, correct_idx:correctIdx,
-    chosen_content:chosenContent||'', correct_content:correctContent||'',
-    errtag:errtag||'', answered_at:new Date().toISOString() });
+  a.push({ qid:word, qtype:'reading', tag:errtag||'',
+    is_correct:isCorrect?1:0,
+    chosen:chosenContent||'', correct:correctContent||'',
+    answered_at:new Date().toISOString() });
   saveAttempts(a);
 }
 // 提交：写进 4_课文理解.py 轮询的那个 localStorage 键（键名与 light 分支一致）
 function submitFinalData(total, firstTryCorrect, mistakes, tier, cardEarned){
   const payload = {
+    // ↓ save_reading_result 直接读取的字段（名字必须对齐）
     session_token: SESSION_TOKEN,
     class_name: READING_CTX.class_name,
     student_id: READING_CTX.student_id,
     student_name: READING_CTX.student_name,
     reading_lesson_id: READING_CTX.reading_lesson_id,
+    total_graded: total,              // 总题数
+    correct_count: firstTryCorrect,   // 一次答对数
+    attempts: loadAttempts(),         // [{qid,qtype,tag,is_correct,chosen,correct}]
+    // ↓ 精读专属附加字段（save_reading_result 忽略，供未来卡片/图鉴用）
     format: 'reading_game',
     lesson_title: META.title_cn || '',
-    total_blanks: total,
-    first_try_correct: firstTryCorrect,   // 一次答对数（正确率信号）
-    mistakes: mistakes,                   // 总错误数（决定卡等级）
-    tier: tier,                           // 'crystal' / 'foil' / 'none'
-    card_earned: cardEarned ? 1 : 0,      // 杠杆B：mistakes<4 才为 1
-    card_name: (READING_DATA.reading_game && READING_DATA.reading_game.card && READING_DATA.reading_game.card.name) || '',
-    attempts: loadAttempts()              // 选项级诊断明细
+    mistakes: mistakes,
+    tier: tier,
+    card_earned: cardEarned ? 1 : 0,
+    card_name: (READING_DATA.reading_game && READING_DATA.reading_game.card && READING_DATA.reading_game.card.name) || ''
   };
   try{ localStorage.setItem('cilang_reading_result_'+SESSION_TOKEN, JSON.stringify(payload)); }catch(e){}
   try{ if(window.parent!==window) window.parent.postMessage({type:'reading_game_complete', payload:payload}, '*'); }catch(e){}
