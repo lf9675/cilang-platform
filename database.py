@@ -1180,9 +1180,31 @@ def save_reading_result(payload: dict) -> tuple:
         student_id = payload.get("student_id", "")
         student_name = payload.get("student_name", "")
         reading_lesson_id = int(payload.get("reading_lesson_id"))
-        total_graded = int(payload.get("total_graded", 0))
-        correct_count = int(payload.get("correct_count", 0))
+
+        # ===== 字段归一化：兼容两种模板的 payload 约定 =====
+        # 轻交互模板：total_graded / correct_count；
+        # 精读闯关模板（词灵卡）：total_blanks / first_try_correct。
+        if "total_graded" in payload:
+            total_graded = int(payload.get("total_graded", 0))
+            correct_count = int(payload.get("correct_count", 0))
+        else:
+            total_graded = int(payload.get("total_blanks", 0))
+            correct_count = int(payload.get("first_try_correct", 0))
+
         attempts = payload.get("attempts", []) or []
+        # 逐题字段归一化：精读闯关用 word/chosen_content/correct_content/errtag，
+        # 轻交互用 qid/chosen/correct/tag。统一成 save 需要的键。
+        norm_attempts = []
+        for a in attempts:
+            norm_attempts.append({
+                "qid": a.get("qid") or a.get("word", ""),
+                "qtype": a.get("qtype") or ("fill_blank" if "word" in a else ""),
+                "tag": a.get("tag") or a.get("errtag", ""),
+                "is_correct": bool(a.get("is_correct", False)),
+                "chosen": a.get("chosen") or a.get("chosen_content", ""),
+                "correct": a.get("correct") or a.get("correct_content", ""),
+            })
+        attempts = norm_attempts
 
         teacher_id = find_teacher_id_for_class(class_name)
 
