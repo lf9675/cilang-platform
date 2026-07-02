@@ -81,11 +81,12 @@ st.markdown("---")
 
 
 # ============ 主功能区 ============
-tab_guide, tab_list, tab_create, tab_import = st.tabs([
+tab_guide, tab_list, tab_create, tab_import, tab_link = st.tabs([
     "📋 出题指令",
     "📚 现有课文",
     "➕ 创建新课文",
-    "📥 导入 JSON"
+    "📥 导入 JSON",
+    "🔗 关联词语闯关"
 ])
 
 
@@ -417,3 +418,63 @@ with st.expander("📘 怎么用?"):
 - ❌ JSON 字符串里用错引号导致结构破坏
 - ❌ 末尾多了逗号 → JSON 不允许末尾逗号
 """)
+
+
+# ============ Tab 4:关联词语闯关(结算页"再战第四关"按钮的开关) ============
+with tab_link:
+    st.markdown("### 🔗 把阅读/精读课文挂到词语闯关后面")
+    st.caption(
+        "设置关联后,学生做完该篇「词语闯关」的结算页会出现按钮,"
+        "一键进入这里选定的阅读理解或精读闯关。不设置则不出现按钮。"
+    )
+
+    vocab_tree = db.list_grades_units_lessons()
+    reading_list = db.list_reading_lessons(only_published=False)
+
+    if not vocab_tree:
+        st.warning("还没有任何词语闯关课文。请先在「题库管理」创建。")
+    elif not reading_list:
+        st.warning("还没有任何阅读理解/精读课文。请先在本页「创建新课文」并「导入 JSON」。")
+    else:
+        # --- 选词语课文 ---
+        vocab_options = {}
+        for grade, units in vocab_tree.items():
+            for unit, lessons in units.items():
+                for (lid, lesson_no, title) in lessons:
+                    label = f"{grade} · {unit} · {lesson_no} · 《{title}》"
+                    vocab_options[label] = lid
+
+        sel_vocab_label = st.selectbox("① 选择词语闯关课文", list(vocab_options.keys()))
+        sel_vocab_id = vocab_options[sel_vocab_label]
+
+        # 显示当前关联状态
+        current_rid = db.get_lesson_linked_reading(sel_vocab_id)
+        reading_by_id = {r["id"]: r for r in reading_list}
+        if current_rid is not None and current_rid in reading_by_id:
+            cur = reading_by_id[current_rid]
+            st.info(f"当前已关联:《{cur['title_cn']}》(id={current_rid})")
+        else:
+            st.caption("当前未关联。")
+
+        # --- 选阅读/精读课文 ---
+        reading_options = {"(不关联 / 解除关联)": None}
+        for r in reading_list:
+            pub = "已发布" if r.get("is_published") else "未发布"
+            label = f"《{r['title_cn']}》 · {r.get('grade','')} {r.get('unit','')} {r.get('lesson_no','')} · {pub} (id={r['id']})"
+            reading_options[label] = r["id"]
+
+        sel_reading_label = st.selectbox("② 选择要挂在后面的阅读/精读课文", list(reading_options.keys()))
+        sel_reading_id = reading_options[sel_reading_label]
+
+        if sel_reading_id is not None:
+            picked = reading_by_id.get(sel_reading_id, {})
+            if not picked.get("is_published"):
+                st.warning("⚠️ 这篇课文还未发布。学生端要能进入,记得先在「现有课文」里发布它。")
+
+        if st.button("💾 保存关联", type="primary", use_container_width=True):
+            db.set_lesson_linked_reading(sel_vocab_id, sel_reading_id)
+            if sel_reading_id is None:
+                st.success("已解除关联。学生结算页不再显示按钮。")
+            else:
+                st.success("已保存!学生做完这篇词语闯关,结算页会出现「再战第四关」按钮。")
+            st.rerun()
