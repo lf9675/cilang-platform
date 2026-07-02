@@ -75,6 +75,7 @@ def init_session_state():
         "selected_lesson_id": None,
         "session_token": None,
         "quiz_in_progress": False,
+        "quiz_celebration": None,    # 提交成功后的结算态(修复按钮点击丢失)
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -283,6 +284,7 @@ def render_lesson_selector():
                         st.session_state.selected_lesson_id = lesson_id
                         st.session_state.session_token = str(uuid.uuid4())
                         st.session_state.quiz_in_progress = True
+                        st.session_state.quiz_celebration = None
                         st.rerun()
                 else:
                     st.button("暂不可用", key=f"na_{lesson_id}", disabled=True, use_container_width=True)
@@ -299,6 +301,11 @@ def find_teacher_for_class(class_name: str) -> int | None:
 
 def render_quiz():
     """渲染闯关页面（嵌入HTML）"""
+    # ===== 结算态拦截:提交成功后走稳定的结算屏,不再渲染闯关页 =====
+    if st.session_state.get("quiz_celebration"):
+        render_celebration()
+        return
+
     info = st.session_state.student_info
     lesson_id = st.session_state.selected_lesson_id
     session_token = st.session_state.session_token
@@ -477,52 +484,87 @@ def process_submission(payload: dict):
             )
 
         acc = round(correct_steps * 100 / total_steps, 1) if total_steps > 0 else 0
-        st.success(f"🎉 成绩已提交！正确率 {acc}%，共获得 ⭐ {stars_earned} 颗星")
-        st.balloons()
-
-        # ===== 预习流程：这篇课文若关联了阅读理解，突出"继续做课文理解" =====
-        linked_reading_id = db.get_lesson_linked_reading(lesson_id)
-
-        if linked_reading_id is not None:
-            st.markdown("#### 🎯 词语闯关完成！这一课还有课文理解，一起做完就是完整预习～")
-            if st.button("📖 继续做课文理解 →", type="primary", use_container_width=True):
-                # 直接把目标阅读理解课文选好，学生跳过去不用重新登录/选课
-                st.session_state.selected_reading_lesson = linked_reading_id
-                st.session_state.reading_session_token = str(uuid.uuid4())
-                # 清掉词语闯关状态，避免返回时残留
-                st.session_state.quiz_in_progress = False
-                st.session_state.selected_lesson_id = None
-                st.session_state.session_token = None
-                st.switch_page("pages/4_📖_课文理解.py")
-
-            # 次要动作放小按钮
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("📚 先选其他课文", use_container_width=True):
-                    st.session_state.quiz_in_progress = False
-                    st.session_state.selected_lesson_id = None
-                    st.session_state.session_token = None
-                    st.rerun()
-            with col2:
-                if st.button("🔄 重做词语这一课", use_container_width=True):
-                    st.session_state.session_token = str(uuid.uuid4())
-                    st.rerun()
-        else:
-            # 没关联阅读理解：保持原有两个按钮
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("📚 再选其他课文", use_container_width=True):
-                    st.session_state.quiz_in_progress = False
-                    st.session_state.selected_lesson_id = None
-                    st.session_state.session_token = None
-                    st.rerun()
-            with col2:
-                if st.button("🔄 重做这一课", use_container_width=True):
-                    st.session_state.session_token = str(uuid.uuid4())
-                    st.rerun()
+        # ===== 修复:结算画面不能渲染在这个一次性分支里 =====
+        # 之前把「恭喜+继续做课文理解」按钮直接画在这里,导致点按钮后页面重跑、
+        # 这段代码不再执行、点击被丢弃(页面停留在闯关页)。
+        # 现在改为:把结算信息存进 session_state,立刻重跑,
+        # 由 render_quiz 开头的稳定路径渲染结算屏,按钮点击才有效。
+        st.session_state.quiz_celebration = {
+            "lesson_id": lesson_id,
+            "acc": acc,
+            "stars": stars_earned,
+            "balloons_shown": False,
+        }
+        st.rerun()
 
     except Exception as e:
         st.error(f"保存失败：{e}")
+
+
+def render_celebration():
+    """结算屏(稳定路径):提交成功后由 render_quiz 开头渲染。
+    按钮画在这里,每次重跑都会重新渲染,点击不会丢失。"""
+    cele = st.session_state.quiz_celebration
+    lesson_id = cele["lesson_id"]
+
+    st.success(f"🎉 成绩已提交！正确率 {cele['acc']}%，共获得 ⭐ {cele['stars']} 颗星")
+    if not cele.get("balloons_shown"):
+        st.balloons()
+        cele["balloons_shown"] = True
+
+    # ===== 预习流程：这篇课文若关联了阅读/精读，突出续做按钮 =====
+    linked_reading_id = db.get_lesson_linked_reading(lesson_id)
+
+    if linked_reading_id is not None:
+        # 按关联课文的格式区分文案:精读闯关(reading_game)→ 拿精灵卡;其他 → 课文理解
+        _linked = db.get_reading_lesson(linked_reading_id) or {}
+        _is_rg = str(_linked.get('lesson_meta', {}).get('format', '')).lower() == 'reading_game'
+        if _is_rg:
+            st.markdown("#### ⚔️ 词语三关完成!第四关等你——精读故事,赢取精灵卡!")
+            btn_label = "⚔️ 再战第四关 · 拿精灵卡 →"
+        else:
+            st.markdown("#### 🎯 词语闯关完成!这一课还有课文理解,一起做完就是完整预习～")
+            btn_label = "📖 继续做课文理解 →"
+        if st.button(btn_label, type="primary", use_container_width=True):
+            # 直接把目标阅读理解课文选好，学生跳过去不用重新登录/选课
+            st.session_state.selected_reading_lesson = linked_reading_id
+            st.session_state.reading_session_token = str(uuid.uuid4())
+            # 清掉词语闯关状态，避免返回时残留
+            st.session_state.quiz_celebration = None
+            st.session_state.quiz_in_progress = False
+            st.session_state.selected_lesson_id = None
+            st.session_state.session_token = None
+            st.switch_page("pages/4_📖_课文理解.py")
+
+        # 次要动作放小按钮
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📚 先选其他课文", use_container_width=True):
+                st.session_state.quiz_celebration = None
+                st.session_state.quiz_in_progress = False
+                st.session_state.selected_lesson_id = None
+                st.session_state.session_token = None
+                st.rerun()
+        with col2:
+            if st.button("🔄 重做词语这一课", use_container_width=True):
+                st.session_state.quiz_celebration = None
+                st.session_state.session_token = str(uuid.uuid4())
+                st.rerun()
+    else:
+        # 没关联阅读理解：保持原有两个按钮
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📚 再选其他课文", use_container_width=True):
+                st.session_state.quiz_celebration = None
+                st.session_state.quiz_in_progress = False
+                st.session_state.selected_lesson_id = None
+                st.session_state.session_token = None
+                st.rerun()
+        with col2:
+            if st.button("🔄 重做这一课", use_container_width=True):
+                st.session_state.quiz_celebration = None
+                st.session_state.session_token = str(uuid.uuid4())
+                st.rerun()
 
 
 # ==================== 主流程 ====================
