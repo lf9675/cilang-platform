@@ -154,6 +154,8 @@ def render_reading_submit(session_token: str, info: dict):
                                 window.HTMLTextAreaElement.prototype, 'value').set;
                             setter.call(ta, data);
                             ta.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            // 第一次检测到成绩时，把提交按钮滚进视野，提醒学生点提交
+                            try {{ ta.scrollIntoView({{behavior:'smooth', block:'center'}}); }} catch(e) {{}}
                         }}
                         return true;
                     }}
