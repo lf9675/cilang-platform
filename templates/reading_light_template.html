@@ -187,6 +187,7 @@ body.allterms .term::after{opacity:1;}
 <script>
 /* ============== 数据：整份课文 JSON 由 4_课文理解.py 注入 __LESSON_DATA__ ============== */
 const DATA = __LESSON_DATA__;
+const READING_CTX = __READING_CONTEXT__;   // 学生/会话上下文，由 4_课文理解.py 注入
 const META   = DATA.lesson_meta || {};
 const TERMS  = DATA.terms || {};
 const STORY  = (DATA.story && DATA.story.paragraphs) ? DATA.story.paragraphs : [];
@@ -199,6 +200,33 @@ document.title = (META.title_cn ? META.title_cn+' · 精读闯关' : '精读闯�
 /* ============== STATE ============== */
 let pi=0, si=-1, correctCount=0, totalGraded=0;
 const earned=[];
+
+/* ============== 成绩记录（供老师后台诊断，与 reading_game 模板同一约定）============== */
+const ATTEMPTS=[];
+function logAttempt(q,ok,chosen,correct){
+  ATTEMPTS.push({
+    qid:String(q.id||''), qtype:String(q.type||''), tag:String(q.tag||''),
+    is_correct:!!ok,
+    chosen:stripTags(chosen==null?'':chosen),
+    correct:stripTags(correct==null?'':correct)
+  });
+}
+function saveResult(){
+  try{
+    if(!READING_CTX || !READING_CTX.session_token) return;
+    const payload={
+      session_token: READING_CTX.session_token,
+      class_name: READING_CTX.class_name,
+      student_id: READING_CTX.student_id,
+      student_name: READING_CTX.student_name,
+      reading_lesson_id: READING_CTX.reading_lesson_id,
+      total_graded: totalGraded,
+      correct_count: correctCount,
+      attempts: ATTEMPTS
+    };
+    localStorage.setItem('cilang_reading_result_'+READING_CTX.session_token, JSON.stringify(payload));
+  }catch(e){}
+}
 
 /* ============== UTILS ============== */
 const $=(s)=>document.querySelector(s);
@@ -351,6 +379,7 @@ function submitChoice(correct){
   const q=PHASES[pi].questions[si]; const ok=choiceSel===correct;
   opts.children[correct].classList.add('correct');
   if(!ok){ opts.children[choiceSel].classList.add('wrong'); opts.children[choiceSel].classList.add('shake'); }
+  logAttempt(q, ok, q.options[choiceSel], q.options[correct]);
   choiceSel=-1; feedback(ok,false,q,$('#qc'));
 }
 
@@ -377,6 +406,9 @@ function submitMatch(){
     const selEl=document.querySelector('.chip[data-r="'+ri+'"][data-c="'+sel+'"]');
     if(sel===r.c){ selEl.classList.add('correct'); right++; }
     else{ selEl.classList.add('wrong'); document.querySelector('.chip[data-r="'+ri+'"][data-c="'+r.c+'"]').classList.add('correct'); } });
+  logAttempt(q, right===q.rows.length,
+    q.rows.map((r,ri)=>r.l+'→'+q.chips[matchSel[ri]]).join('；'),
+    q.rows.map(r=>r.l+'→'+q.chips[r.c]).join('；'));
   feedback(right===q.rows.length, right>0&&right<q.rows.length, q, $('#qc'));
 }
 
@@ -410,6 +442,7 @@ function submitOrder(){
   const cards=document.querySelectorAll('.ocard'); cards.forEach(c=>c.onclick=null);
   const ok=orderArr.every((v,i)=>v===i);
   orderArr.forEach((it,pos)=>{ cards[pos].classList.add(it===pos?'correct':'wrong'); });
+  logAttempt(q, ok, orderArr.map(i=>i+1).join('→'), q.items.map((_,i)=>i+1).join('→'));
   if(ok){
     const meter=$('#meter'); meter.classList.add('show');
     meter.innerHTML='<div style="font-size:13px;color:var(--ink-faded);margin-bottom:6px">⚖️ 看「代价」怎样一步步加重：</div>'
@@ -491,6 +524,7 @@ function qHead(ph,q){
 }
 function stripTags(s){return String(s).replace(/<[^>]+>/g,'');}
 function renderFinale(){
+  saveResult();
   const pct=totalGraded?Math.round(correctCount/totalGraded*100):0;
   let stars='⭐',rank='见习读者';
   if(pct>=90){stars='⭐⭐⭐';rank='解读高手';}
@@ -507,7 +541,7 @@ function renderFinale(){
     +(FINALE.tip?'<div class="lead" style="font-size:13.5px">'+render2(FINALE.tip)+'</div>':'')
     +'<button class="btn primary" onclick="restart()">再挑战一次 · Replay</button></div>';
 }
-function restart(){ pi=0;si=-1;correctCount=0;totalGraded=0;earned.length=0;warmDone=false;wIndex=0;wRight=0; render(); }
+function restart(){ pi=0;si=-1;correctCount=0;totalGraded=0;earned.length=0;warmDone=false;wIndex=0;wRight=0;ATTEMPTS.length=0; render(); }
 
 /* ============== GO ============== */
 (function(){ const ht=$('#hudTitle'); if(ht) ht.textContent=(META.title_cn?'《'+META.title_cn+'》 · 精读':'精读闯关'); })();
